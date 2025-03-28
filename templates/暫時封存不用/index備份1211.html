@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Index Page</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/grid_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_styles.css') }}">
+    <!-- <style>
+    </style> -->
+    <script>
+        function toggleFolder(event) {
+            // function for sidebar
+            const element = event.target;
+            const sublist = element.nextElementSibling;
+            if (sublist) {
+                sublist.classList.toggle('active');
+                element.classList.toggle('active');
+            }
+        }
+    </script>
+</head>
+<body>
+    <!-- <div class="sidebar">
+        <ul>
+            {% for dirpath, content in dir_structure.items() %}
+                <li class="folder" onclick="toggleFolder(event)">
+                    {{ dirpath }}
+                    <ul>
+                        {% for dir in content.dirs %}
+                            <li class="folder" onclick="toggleFolder(event)">{{ dir }}</li>
+                        {% endfor %}
+                        {% for file in content.files %}
+                            <li class="file"><a href="{{ url_for('static', filename=dirpath + '/' + file) }}" target="_blank">{{ file }}</a></li>
+                        {% endfor %}
+                    </ul>
+                </li>
+            {% endfor %}
+        </ul>
+    </div> -->
+    <!-- 包含導航欄 -->
+    {% include '_navbar.html' %}
+    
+    <div class="container">
+        <h1>{{ title }}</h1>
+        <div class="image-grid">
+            {% for folder, thumbnail in folder_thumbnails.items() %}
+            <div class="image-item">
+                <a href="{{ url_for('view_both', folder_path=folder) }}">
+                <!-- <a href="{{ url_for('view_slide', folder_path=folder) }}"></a> -->
+                    <img src="{{ thumbnail }}" alt="Folder Thumbnail">
+                    <div class="image-overlay">
+                        <span>{{ folder }}</span>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <img src="{{ url_for('serve_image', filename='test.png') }}" alt="Example Image">
+</body>
+</html>

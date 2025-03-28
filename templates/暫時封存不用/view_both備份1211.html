@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/grid_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/botton_styles.css') }}">
+    <style>
+        .image-grid, .single-page {
+            display: none;  /* 默认隐藏 */
+        }
+        .visible {
+            display: block;  /* 只有带有 visible 类的元素显示 */
+        }
+        .image-grid.visible {  
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            grid-gap: 20px;
+        }
+        img {
+            display: block;
+            width: 75%;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+
+            margin: 0 auto 20px;  /* 上下边距分别是 0 和 20px，左右边距自动居中 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ title }}</h1>
+        <div class="toggle-button" onclick="toggleView()">Switch View</div>
+        <a href="/" class="button">Home</a>
+
+        <!-- Grid View -->
+        <div id="gridView" class="image-grid visible">
+            {% for image_path in image_paths %}
+            <div class="image-item">
+                <a href="/{{ image_path }}">
+                    <img src="/{{ image_path }}" alt="Image">
+                    <div class="image-overlay">
+                        <span>{{ image_path }}</span>
+                        <!-- <a href="{{ image_file }}" target="_blank" rel="noopener noreferrer">View</a> -->
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Single Page View -->
+        <div id="singlePageView" class="single-page">
+            {% for image_path in image_paths %}
+            <!-- 直接使用完整路径 -->
+            <!-- {{ image_path }} -->
+            <img src="/{{ image_path }}" alt="Comic Image">
+            <!-- 注意在路径前加上 /，表示从网站的根路径开始。 -->
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        // 确保脚本在页面加载后执行
+        window.onload = function() {
+            function toggleView() {
+                console.log("Switch View button clicked"); // 调试信息
+                var gridView = document.getElementById('gridView');
+                var singlePageView = document.getElementById('singlePageView');
+
+                if (gridView.classList.contains('visible')) {
+                    // console.log("Switching to Single Page View");
+                    gridView.classList.remove('visible');
+                    singlePageView.classList.add('visible');
+                } else {
+                    // console.log("Switching to Grid View");
+                    singlePageView.classList.remove('visible');
+                    gridView.classList.add('visible');
+                }
+            }
+
+            // 将函数赋值给按钮的点击事件
+            document.querySelector('.toggle-button').onclick = toggleView;
+        };
+    </script>
+</body>
+</html>

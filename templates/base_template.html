@@ -1,0 +1,28 @@
+<!-- templates/base_template.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{title}}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main_styles.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/nav_styles.css') }}">
+
+    {% block custom_style %}
+    <!-- 頁面專屬樣式在這裡覆蓋 -->
+    <!-- <style>
+    </style> -->
+    {% endblock %}
+
+</head>
+
+<body>
+    <!-- 包含導航欄 & sidebar, sidebar還沒修好 -->
+    {% include '_navbar.html' %}
+    
+    <!-- 主內容區域 -->
+    {% block page_content %}
+    <!-- 頁面內容將在這裡被覆蓋 -->
+    {% endblock %}
+</body>
+</html>

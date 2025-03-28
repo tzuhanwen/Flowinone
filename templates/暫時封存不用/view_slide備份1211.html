@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>title</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/main_styles.css') }}"> 
+    <style>
+        img {
+            display: block;
+            width: 75%;
+            margin-bottom: 20px;
+            border: 1px solid #ddd;
+            margin: 0 auto 20px;  /* 上下边距分别是 0 和 20px，左右边距自动居中 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>{{ title }}</h1>
+        {% for image_path in image_paths %}
+            <!-- 直接使用完整路径 -->
+            <!-- {{ image_path }} -->
+            <img src="/{{ image_path }}" alt="Comic Image">
+            <!-- 注意在路径前加上 /，表示从网站的根路径开始。 -->
+        {% endfor %}
+    </div>
+</body>
+</html>

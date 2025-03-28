@@ -1,0 +1,46 @@
+        /* 導航欄樣式 */
+        nav {
+            background-color: #333;
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 導航連結樣式 */
+        nav a {
+            color: white;
+            text-decoration: none;
+            padding: 10px 15px;
+        }
+
+        nav a:hover {
+            background-color: #575757;
+        }
+
+        /* 搜尋欄樣式 */
+        .search-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .search-container input[type="text"] {
+            padding: 5px;
+            font-size: 16px;
+            border: none;
+            border-radius: 3px;
+        }
+
+        .search-container button {
+            padding: 5px 10px;
+            background-color: #575757;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-left: 5px;
+            border-radius: 3px;
+        }
+
+        .search-container button:hover {
+            background-color: #777;
+        }

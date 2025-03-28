@@ -1,0 +1,77 @@
+<!-- templates/view_both_new.html -->
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/grid_styles.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/button_styles.css') }}">
+<style>
+    .image-grid, .single-page {
+        display: none;  /* 默认隐藏 */
+    }
+    .visible {
+        display: block;  /* 只有带有 visible 类的元素显示 */
+    }
+    .image-grid.visible {  
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        grid-gap: 20px;
+    }
+    img {
+        display: block;
+        width: 75%;
+        margin-bottom: 20px;
+        border: 1px solid #ddd;
+        margin: 0 auto 20px;  /* 上下边距分别是 0 和 20px，左右边距自动居中 */
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+    <h1>{{ metadata.name }}</h1>
+    <div class="toggle-button" onclick="toggleView()">Switch View</div>
+    <a href="/" class="button">Home</a>
+
+    <!-- Grid View -->
+    <div id="gridView" class="image-grid visible">
+        {% for image in data %}
+        <div class="image-item">
+            <a href="{{ image.url }}">
+                <img src="/{{ image.thumbnail_route }}" alt="Image">
+                <div class="image-overlay">
+                    <span>{{ image.name }}</span>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Single Page View -->
+    <div id="singlePageView" class="single-page">
+        {% for image in data %}
+        <img src="{{ image.url }}" alt="Comic Image">
+        {% endfor %}
+    </div>
+</div>
+
+<script>
+    // 确保脚本在页面加载后执行
+    window.onload = function() {
+        function toggleView() {
+            var gridView = document.getElementById('gridView');
+            var singlePageView = document.getElementById('singlePageView');
+
+            if (gridView.classList.contains('visible')) {
+                gridView.classList.remove('visible');
+                singlePageView.classList.add('visible');
+            } else {
+                singlePageView.classList.remove('visible');
+                gridView.classList.add('visible');
+            }
+        }
+
+        // 将函数赋值给按钮的点击事件
+        document.querySelector('.toggle-button').onclick = toggleView;
+    };
+</script>
+{% endblock %}

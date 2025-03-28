@@ -1,0 +1,24 @@
+<!-- templates/view_grid_new.html -->
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/grid_styles.css') }}">
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+    <h1>{{ metadata.name }}</h1>
+    <div class="image-grid">
+        {% for image in data %}
+        <div class="image-item">
+            <a href="{{ image.url }}">
+                <img src="{{ image.thumbnail_route }}" alt="Image">
+                <div class="image-overlay">
+                    <span>{{ image.name }}</span>
+                </div>
+            </a>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
