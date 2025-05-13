@@ -1,6 +1,7 @@
 import os
 import random
 import src.eagle_api as EG
+from flask import abort
 
 index_folder = 'static/temp_for_display'
 
@@ -12,7 +13,7 @@ def get_folders_info():
 
     metadata = {
         "name": "All Collections",
-        "category": "collection",
+        "category": "collections",
         "tags": ["collection", "group"],
         "path": "/collections",
         "thumbnail_route": "/static/default_thumbnail.jpg"
@@ -28,7 +29,7 @@ def get_folders_info():
 
         data.append({
             "name": folder,
-            "path": f"/both/{folder}",
+            "url": f"/both/{folder}",
             "thumbnail_route": os.path.join(folder_path, thumbnail_path).replace('\\', '/')
         })
 

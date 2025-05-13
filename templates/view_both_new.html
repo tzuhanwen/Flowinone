@@ -58,13 +58,16 @@
     // 确保脚本在页面加载后执行
     window.onload = function() {
         function toggleView() {
+            // console.log("Switch View button clicked"); // 调试信息
             var gridView = document.getElementById('gridView');
             var singlePageView = document.getElementById('singlePageView');
 
             if (gridView.classList.contains('visible')) {
+                // console.log("Switching to Single Page View");
                 gridView.classList.remove('visible');
                 singlePageView.classList.add('visible');
             } else {
+                // console.log("Switching to Grid View");
                 singlePageView.classList.remove('visible');
                 gridView.classList.add('visible');
             }
