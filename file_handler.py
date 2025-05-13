@@ -32,7 +32,6 @@ def get_folders_info():
             "name": folder,
             "url": f"/both/{folder}",
             "thumbnail_route": f"/{str(temp)}"
-            # "thumbnail_route": ('/'+str(temp))
         })
 
     return metadata, data
@@ -103,7 +102,7 @@ def get_eagle_folders():
 
     return metadata, data
 
-def get_eagle_images(eagle_folder_id):
+def get_eagle_images_by_folderid(eagle_folder_id):
     """
     獲取 Eagle API 提供的指定資料夾內的圖片資訊，符合 EAGLE API 格式
     """
@@ -131,7 +130,7 @@ def get_eagle_images(eagle_folder_id):
 
         data.append({
             "name": image_name,
-            "path": image_path,
+            # "path": image_path,
             "thumbnail_route": image_path,  # 假設縮圖與原圖相同
             "url": image_path
         })
@@ -175,7 +174,7 @@ def get_eagle_images_by_tag(target_tag):
 
         data.append({
             "name": image_name,
-            "path": image_path,
+            # "path": image_path,
             "thumbnail_route": image_path,  # 假設縮圖與原圖相同
             "url": image_path
         })
