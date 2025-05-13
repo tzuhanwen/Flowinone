@@ -1,4 +1,4 @@
-<!-- templates/view_both_eagle_new.html -->
+<!-- templates/view_both_eagle.html -->
 {% extends 'base_template.html' %}
 
 {% block custom_style %}
@@ -38,7 +38,7 @@
     <!-- Grid View -->
     <div id="gridView" class="image-grid visible">
         {% for image in data %}
-        <div class="image-item" data-path="{{ image.path }}">
+        <div class="image-item" data-url="{{ image.url }}">
             <a href="{{ image.url }}">
                 <img src="{{ image.thumbnail_route }}" alt="Image">
                 <div class="image-overlay">
@@ -69,8 +69,8 @@
 
             // 根据排序状态调整顺序
             items.sort((a, b) => {
-                const pathA = a.getAttribute('data-path');
-                const pathB = b.getAttribute('data-path');
+                const pathA = a.getAttribute('data-url');
+                const pathB = b.getAttribute('data-url');
                 return isAscending ? pathA.localeCompare(pathB) : pathB.localeCompare(pathA);
             });
 
