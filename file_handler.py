@@ -15,7 +15,7 @@ def get_folders_info():
         "name": "All Collections",
         "category": "collections",
         "tags": ["collection", "group"],
-        "path": "/collections",
+        # "path": "/collections",
         "thumbnail_route": "/static/default_thumbnail.jpg"
     }
 
@@ -27,10 +27,12 @@ def get_folders_info():
         image_files = [f for f in os.listdir(folder_path) if f.endswith(('jpg', 'jpeg', 'png', 'gif'))]
         thumbnail_path = random.choice(image_files) if image_files else "/static/default_thumbnail.jpg"
 
+        temp = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
         data.append({
             "name": folder,
             "url": f"/both/{folder}",
-            "thumbnail_route": os.path.join(folder_path, thumbnail_path).replace('\\', '/')
+            "thumbnail_route": f"/{str(temp)}"
+            # "thumbnail_route": ('/'+str(temp))
         })
 
     return metadata, data
@@ -59,8 +61,8 @@ def get_folder_images(folder_path):
         image_path = os.path.join(image_folder, image_file).replace('\\', '/')
         data.append({
             "name": image_file,
-            "path": image_path,
-            "thumbnail_route": image_path,
+            # "path": image_path,
+            "thumbnail_route": f"/{image_path}",
             "url": f"/{image_path}"
         })
 
@@ -76,7 +78,7 @@ def get_eagle_folders():
 
     metadata = {
         "name": "All Eagle Folders",
-        "category": "collection",
+        "category": "collections",
         "tags": ["eagle", "folders"],
         "path": "/EAGLE_folder",
         "thumbnail_route": "/static/default_thumbnail.jpg"

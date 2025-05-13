@@ -23,12 +23,12 @@
 <div class="container">
     <h1>{{ metadata.name }}</h1>
     <div class="image-grid">
-        {% for folder in data %}
+        {% for item in data %}
         <div class="image-item">
-            <a href="{{ folder.url }}">
-                <img src="{{ folder.thumbnail_route }}" alt="{{ folder.name }}">
+            <a href="{{ item.url }}">
+                <img src="{{ item.thumbnail_route }}" alt="{{ item.name }}">
                 <div class="image-overlay">
-                    <span>{{ folder.name }}</span>
+                    <span>{{ item.name }}</span>
                 </div>
             </a>
         </div>
