@@ -49,7 +49,7 @@ def register_routes(app):
     def list_all_eagle_folder():
         """列出所有 Eagle 資料夾，並符合 EAGLE API 樣式"""
         metadata, data = get_eagle_folders()
-        return render_template("index_eagle_folder_new.html", metadata=metadata, data=data)
+        return render_template("index_eagle_folder.html", metadata=metadata, data=data)
 
     @app.route('/EAGLE_folder/<eagle_folder_id>/')
     def view_eagle_folder(eagle_folder_id):

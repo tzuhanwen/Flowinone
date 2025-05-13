@@ -21,14 +21,14 @@
 
 {% block page_content %}
 <div class="container">
-    <h1>{{ title }}</h1>
+    <h1>{{ metadata.name }}</h1>
     <div class="image-grid">
-        {% for folder_name, folder_info in folder_thumbnails.items() %}
+        {% for folder in data %}
         <div class="image-item">
-            <a href="/EAGLE_folder/{{ folder_info.id }}/">
-                <img src="{{ folder_info.thumbnail }}" alt="{{ folder_name }}">
+            <a href="{{ folder.url }}">
+                <img src="{{ folder.thumbnail_route }}" alt="{{ folder.name }}">
                 <div class="image-overlay">
-                    <span>{{ folder_name }}</span>
+                    <span>{{ folder.name }}</span>
                 </div>
             </a>
         </div>

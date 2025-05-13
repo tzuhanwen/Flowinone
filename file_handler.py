@@ -95,7 +95,7 @@ def get_eagle_folders():
         data.append({
             "name": folder_name,
             "id": folder_id,
-            "path": f"/EAGLE_folder/{folder_id}/",
+            "url": f"/EAGLE_folder/{folder_id}/",
             "thumbnail_route": thumbnail_path
         })
 
