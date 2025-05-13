@@ -25,25 +25,25 @@ def register_routes(app):
     def index():
         """獲取所有資料夾，並符合 EAGLE API 格式"""
         metadata, data = get_folders_info()
-        return render_template('index_new.html', metadata=metadata, data=data)
+        return render_template('index.html', metadata=metadata, data=data)
 
     @app.route('/both/<path:folder_path>/')
     def view_both(folder_path):
         """取得指定資料夾內的所有圖片"""
         metadata, data = get_folder_images(folder_path)
-        return render_template('view_both_new.html', metadata=metadata, data=data)
+        return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/grid/<path:folder_path>/')
     def view_grid(folder_path):
         """取得指定資料夾內的所有圖片（Grid 模式）"""
         metadata, data = get_folder_images(folder_path)
-        return render_template('view_grid_new.html', metadata=metadata, data=data)
+        return render_template('view_grid.html', metadata=metadata, data=data)
 
     @app.route('/slide/<path:folder_path>/')
     def view_slide(folder_path):
         """取得指定資料夾內的所有圖片（Slide 模式）"""
         metadata, data = get_folder_images(folder_path)
-        return render_template('view_slide_new.html', metadata=metadata, data=data)
+        return render_template('view_slide.html', metadata=metadata, data=data)
 
     @app.route('/EAGLE_folder/')
     def list_all_eagle_folder():
