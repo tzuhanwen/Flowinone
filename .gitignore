@@ -1,8 +1,5 @@
-
 .vscode
 .DS_Store
 __pycache__/
-
-# Jupyter Notebook
+temp_for_display
 .ipynb_checkpoints
-

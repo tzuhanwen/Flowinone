@@ -4,7 +4,6 @@ from flask import Flask, render_template, abort, send_from_directory
 from file_handler import get_folders_info, get_folder_images, get_eagle_folders, get_eagle_images, get_eagle_images_by_tag
 
 
-
 def register_routes_debug(app):
     @app.route('/debug/')
     def debug_print():
