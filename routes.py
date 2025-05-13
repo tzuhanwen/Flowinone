@@ -55,7 +55,7 @@ def register_routes(app):
     def view_eagle_folder(eagle_folder_id):
         """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
         metadata, data = get_eagle_images(eagle_folder_id)
-        return render_template('view_both_eagle_new.html', metadata=metadata, data=data)
+        return render_template('view_both_eagle.html', metadata=metadata, data=data)
 
     @app.route('/serve_image/<path:image_path>')
     def serve_image_by_full_path(image_path):
@@ -76,4 +76,4 @@ def register_routes(app):
             渲染的 HTML 頁面，顯示所有具有該標籤的圖片。
         """
         metadata, data = get_eagle_images_by_tag(target_tag)
-        return render_template('view_both_eagle_new.html', metadata=metadata, data=data)
+        return render_template('view_both_eagle.html', metadata=metadata, data=data)
