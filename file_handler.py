@@ -203,3 +203,47 @@ def _format_eagle_items(image_items):
         })
 
     return data
+
+def get_subfolders_info(folder_id):
+    """
+    根據指定的 folder_id，取出其 children（子資料夾 id list），
+    並組成符合前端展示格式的 list of dict。
+    """
+    df = EG.EAGLE_get_folders_df()
+
+    # 找出指定 folder row
+    row = df[df["id"] == folder_id]
+    if row.empty:
+        return []
+
+    children_infos = row.iloc[0]["children"]  # 是 list
+    result = []
+
+    for child_info in children_infos:
+        child_id = child_info["id"]
+        # child_row = df[df["id"] == child_info["id"]]
+        # if child_row.empty:
+            # continue
+
+        # child = child_row.iloc[0]
+        sub_name = child_info.get("name", f"(unnamed-{child_id})")
+        path = f"/EAGLE_folder/{child_id}"
+
+        # 嘗試取一張圖作為縮圖
+        folder_response = EG.EAGLE_list_items(folders=[child_id])
+        thumbnail_route = "/static/default_thumbnail.jpg"
+        if folder_response.get("status") == "success" and folder_response.get("data"):
+            first_img = folder_response["data"][0]
+            image_id = first_img["id"]
+            image_name = first_img["name"]
+            image_ext = first_img["ext"]
+            base = EG.EAGLE_get_current_library_path()
+            thumbnail_route = f"/serve_image/{base}/images/{image_id}.info/{image_name}.{image_ext}"
+
+        result.append({
+            "name": f"📁 {sub_name}",
+            "url": path,
+            "thumbnail_route": thumbnail_route
+        })
+
+    return result

@@ -1,7 +1,7 @@
 import os
 import random
 from flask import Flask, render_template, abort, send_from_directory, request
-from file_handler import get_all_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag
+from file_handler import get_all_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag, get_subfolders_info
 from config import DB_route_internal, DB_route_external
 
 def register_routes_debug(app):
@@ -63,7 +63,11 @@ def register_routes(app):
     def view_eagle_folder(eagle_folder_id):
         """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
         metadata, data = get_eagle_images_by_folderid(eagle_folder_id)
-        ### here get subfolders
+        
+        # 加入子資料夾為類似圖片格式
+        subfolders = get_subfolders_info(eagle_folder_id)
+        data = subfolders + data
+        
         return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/serve_image/<path:image_path>')
