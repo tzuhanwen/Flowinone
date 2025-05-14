@@ -29,13 +29,18 @@
 {% block page_content %}
 <div class="container">
     <h1>{{ metadata.name }}</h1>
+    <!-- 📌 插入 metadata 區塊 -->
+    {% include 'components/_metadata_panel.html' %}
+
+    <!-- 添加切换排序的按钮 -->
+    <button id="sortButton" class="button">Toggle Sort</button>
     <div class="toggle-button" onclick="toggleView()">Switch View</div>
     <a href="/" class="button">Home</a>
 
     <!-- Grid View -->
     <div id="gridView" class="image-grid visible">
         {% for image in data %}
-        <div class="image-item">
+        <div class="image-item" data-url="{{ image.url }}">
             <a href="{{ image.url }}">
                 <img src="{{ image.thumbnail_route }}" alt="Image">
                 <div class="image-overlay">
@@ -57,6 +62,31 @@
 <script>
     // 确保脚本在页面加载后执行
     window.onload = function() {
+        let isAscending = true; // 当前排序状态
+
+        function toggleSort() {
+            // 获取 gridView 中的所有图片项
+            const gridView = document.getElementById('gridView');
+            const items = Array.from(gridView.children);
+
+            // 根据排序状态调整顺序
+            items.sort((a, b) => {
+                const pathA = a.getAttribute('data-url');
+                const pathB = b.getAttribute('data-url');
+                return isAscending ? pathA.localeCompare(pathB) : pathB.localeCompare(pathA);
+            });
+
+            // 更新 DOM 顺序
+            items.forEach(item => gridView.appendChild(item));
+
+            // 切换排序状态
+            isAscending = !isAscending;
+        }
+
+        // 绑定事件到按钮
+        document.getElementById('sortButton').onclick = toggleSort;
+
+        // 切换视图功能
         function toggleView() {
             // console.log("Switch View button clicked"); // 调试信息
             var gridView = document.getElementById('gridView');

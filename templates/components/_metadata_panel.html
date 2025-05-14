@@ -1,0 +1,40 @@
+<!-- templates/components/_metadata_panel.html -->
+<div class="metadata-panel" style="padding: 1em; border-bottom: 1px solid #ddd; margin-bottom: 20px;">
+  <h2>📁 {{ metadata.name }}</h2>
+
+  <p>
+    <strong>📂 分類：</strong> {{ metadata.category }}
+  </p>
+
+  {% if metadata.description %}
+  <p>
+    <strong>📝 說明：</strong> {{ metadata.description }}
+  </p>
+  {% endif %}
+
+  {% if metadata.tags %}
+  <p>
+    <strong>🏷️ 標籤：</strong>
+    {% for tag in metadata.tags %}
+      <a href="{{ url_for('view_images_by_tag', target_tag=tag) }}"
+         class="badge badge-primary"
+         style="margin-right: 5px; background-color: #007bff; color: white; padding: 0.3em 0.6em; border-radius: 0.5em; text-decoration: none;">
+        {{ tag }}
+      </a>
+    {% endfor %}
+  </p>
+  {% endif %}
+
+  {% if metadata.similar %}
+  <p>
+    <strong>🔗 相似作品：</strong>
+    {% for similar in metadata.similar[:5] %}
+      <a href="{{ similar.path }}"
+         class="btn btn-sm"
+         style="margin-right: 5px; background-color: #f0f0f0; padding: 0.4em 0.8em; border-radius: 0.4em; text-decoration: none;">
+        {{ similar.name }}
+      </a>
+    {% endfor %}
+  </p>
+  {% endif %}
+</div>

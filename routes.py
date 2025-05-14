@@ -2,7 +2,7 @@ import os
 import random
 from flask import Flask, render_template, abort, send_from_directory
 from file_handler import get_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag
-
+import config
 
 def register_routes_debug(app):
     @app.route('/debug/')
@@ -49,13 +49,13 @@ def register_routes(app):
     def list_all_eagle_folder():
         """列出所有 Eagle 資料夾，並符合 EAGLE API 樣式"""
         metadata, data = get_eagle_folders()
-        return render_template("index_eagle_folder.html", metadata=metadata, data=data)
+        return render_template("index.html", metadata=metadata, data=data)
 
     @app.route('/EAGLE_folder/<eagle_folder_id>/')
     def view_eagle_folder(eagle_folder_id):
         """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
         metadata, data = get_eagle_images_by_folderid(eagle_folder_id)
-        return render_template('view_both_eagle.html', metadata=metadata, data=data)
+        return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/serve_image/<path:image_path>')
     def serve_image_by_full_path(image_path):
@@ -76,4 +76,4 @@ def register_routes(app):
             渲染的 HTML 頁面，顯示所有具有該標籤的圖片。
         """
         metadata, data = get_eagle_images_by_tag(target_tag)
-        return render_template('view_both_eagle.html', metadata=metadata, data=data)
+        return render_template('view_both.html', metadata=metadata, data=data)
