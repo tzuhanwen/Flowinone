@@ -2,67 +2,93 @@ import os
 import random
 import src.eagle_api as EG
 from flask import abort
+from config import index_folder, DB_route
 
-index_folder = 'static/temp_for_display'
-
-def get_folders_info():
+def get_folders_info(src):
     """
     取得 index_folder 內的所有子資料夾資訊，符合 EAGLE API 格式
     """
-    folders = [f for f in os.listdir(index_folder) if os.path.isdir(os.path.join(index_folder, f))]
+
+    if src == "external":
+        base_dir = DB_route
+    else:
+        base_dir = index_folder
+    folders = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
 
     metadata = {
         "name": "All Collections",
         "category": "collections",
-        "tags": ["collection", "group"],
+        "tags": ["collection", "group", "Main"],
         # "path": "/collections",
         "thumbnail_route": "/static/default_thumbnail.jpg"
     }
 
     data = []
     for folder in folders:
-        folder_path = os.path.join(index_folder, folder)
+        folder_path = os.path.join(base_dir, folder)
 
         # 隨機選擇一張圖片作為縮圖
         image_files = [f for f in os.listdir(folder_path) if f.endswith(('jpg', 'jpeg', 'png', 'gif'))]
         thumbnail_path = random.choice(image_files) if image_files else "/static/default_thumbnail.jpg"
 
-        temp = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
+        if src == "external":
+            image_path = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
+            temp1 = f"/serve_image/{image_path}"
+            temp = f"/both/{folder}"
+        else:
+            temp1 = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
+            temp1 = f"/{str(temp1)}"
+            temp = f"/both/{folder}"
         data.append({
             "name": folder,
-            "url": f"/both/{folder}",
-            "thumbnail_route": f"/{str(temp)}"
+            "thumbnail_route": temp1,
+            "url": temp,
         })
 
     return metadata, data
 
-def get_folder_images(folder_path):
+def get_folder_images(folder_path, base_dir=None, src=None):
     """
     取得指定資料夾內的所有圖片，符合 EAGLE API 格式
     """
-    image_folder = os.path.join(index_folder, folder_path)
-    if not os.path.isdir(image_folder):
-        abort(404)
 
+    """
+    從任意資料夾（base_dir + folder_path）中取得圖片
+    """
+    if base_dir is None:
+        base_dir = index_folder  # default to static/temp_for_display
+
+    ### image_folder
+    abs_folder_path = os.path.join(base_dir, folder_path)
+    if not os.path.isdir(abs_folder_path):
+        abort(404)
+    
     metadata = {
-        "name": folder_path,
+        "name": os.path.basename(folder_path),  #folder_path
         "category": "folder",
-        "tags": ["grid", "slide"],
+        "tags": ["grid", "slide", "test_tag_default"],
         "path": f"/both/{folder_path}",
         "thumbnail_route": "/static/default_thumbnail.jpg"
     }
 
     data = []
-    image_files = [f for f in os.listdir(image_folder) if f.endswith(('png', 'jpg', 'jpeg', 'gif'))]
+    image_files = [f for f in os.listdir(abs_folder_path) if f.endswith(('png', 'jpg', 'jpeg', 'gif'))]
     image_files.sort()
 
-    for image_file in image_files:
-        image_path = os.path.join(image_folder, image_file).replace('\\', '/')
+    for img in image_files:
+        image_path = os.path.join(abs_folder_path, img).replace('\\', '/')
+        if src == "external":
+            temp = f"/serve_image/{image_path}"
+            temp1 = f"/serve_image/{image_path}"
+        else:
+            temp = f"/{image_path}"
+            temp1 = f"/{image_path}",
+
         data.append({
-            "name": image_file,
+            "name": img,
             # "path": image_path,
-            "thumbnail_route": f"/{image_path}",
-            "url": f"/{image_path}"
+            "thumbnail_route": temp1,
+            "url": temp
         })
 
     return metadata, data

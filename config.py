@@ -1,1 +1,2 @@
-db_route = ""
+DB_route = ""
+index_folder = ""
