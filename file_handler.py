@@ -144,27 +144,8 @@ def get_eagle_images_by_folderid(eagle_folder_id):
         "path": f"/EAGLE_folder/{eagle_folder_id}",
         "thumbnail_route": "/static/default_thumbnail.jpg"
     }
-
-    data = []
     image_items = response.get("data", [])
-    image_items.sort(key=lambda x: x.get("name", ""))  # 按名稱排序
-
-    for image in image_items:
-        image_id = image.get("id")
-        image_name = image.get("name", "unknown")
-        image_ext = image.get("ext", "jpg")
-        image_path = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_id}.info/{image_name}.{image_ext}"
-
-        thumbnail_route = image_path  # 假設縮圖與原圖相同
-        if image_ext == "mp4":
-            thumbnail_route = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_id}.info/{image_name}_thumbnail.png"
-        data.append({
-            "name": image_name,
-            # "path": image_path,
-            "thumbnail_route": thumbnail_route,
-            "url": image_path
-        })
-
+    data = _format_eagle_items(image_items)
     return metadata, data
 
 def get_eagle_images_by_tag(target_tag):
@@ -191,22 +172,34 @@ def get_eagle_images_by_tag(target_tag):
         "thumbnail_route": "/static/default_thumbnail.jpg"
     }
 
-    # 取得所有圖片
-    data = []
     image_items = response.get("data", [])
-    image_items.sort(key=lambda x: x.get("name", ""))  # 按名稱排序
+    data = _format_eagle_items(image_items)
+    return metadata, data
 
+def _format_eagle_items(image_items):
+    """
+    將 Eagle 圖片清單格式化成 EAGLE API 樣式的 data list。
+    """
+    image_items.sort(key=lambda x: x.get("name", "")) # 按名稱排序
+    data = []
+
+    base = EG.EAGLE_get_current_library_path()
     for image in image_items:
         image_id = image.get("id")
         image_name = image.get("name", "unknown")
         image_ext = image.get("ext", "jpg")
-        image_path = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_id}.info/{image_name}.{image_ext}"
+        image_path = f"/serve_image/{base}/images/{image_id}.info/{image_name}.{image_ext}"
+
+        # 特別處理影片縮圖
+        if image_ext == "mp4":
+            thumbnail_route = f"/serve_image/{base}/images/{image_id}.info/{image_name}_thumbnail.png"
+        else:
+            thumbnail_route = image_path
 
         data.append({
             "name": image_name,
-            # "path": image_path,
-            "thumbnail_route": image_path,  # 假設縮圖與原圖相同
-            "url": image_path
+            "url": image_path,
+            "thumbnail_route": thumbnail_route
         })
 
-    return metadata, data
+    return data
