@@ -2,17 +2,18 @@ import os
 import random
 import src.eagle_api as EG
 from flask import abort
-from config import index_folder, DB_route
+from config import DB_route_internal, DB_route_external
 
-def get_folders_info(src):
+def get_all_folders_info(src):
     """
-    取得 index_folder 內的所有子資料夾資訊，符合 EAGLE API 格式
+    取得 DB_route 內的所有子資料夾資訊，符合 EAGLE API 格式
+    src: internal or external
     """
 
     if src == "external":
-        base_dir = DB_route
+        base_dir = DB_route_external
     else:
-        base_dir = index_folder
+        base_dir = DB_route_internal
     folders = [f for f in os.listdir(base_dir) if os.path.isdir(os.path.join(base_dir, f))]
 
     metadata = {
@@ -31,14 +32,13 @@ def get_folders_info(src):
         image_files = [f for f in os.listdir(folder_path) if f.endswith(('jpg', 'jpeg', 'png', 'gif'))]
         thumbnail_path = random.choice(image_files) if image_files else "/static/default_thumbnail.jpg"
 
+        image_path = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
         if src == "external":
-            image_path = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
             temp1 = f"/serve_image/{image_path}"
             temp = f"/both/{folder}"
         else:
-            temp1 = os.path.join(folder_path, thumbnail_path).replace('\\', '/')
-            temp1 = f"/{str(temp1)}"
-            temp = f"/both/{folder}"
+            temp1 = f"/{str(image_path)}"
+            temp = f"/both/{folder}/?src=internal"
         data.append({
             "name": folder,
             "thumbnail_route": temp1,
@@ -47,16 +47,16 @@ def get_folders_info(src):
 
     return metadata, data
 
-def get_folder_images(folder_path, base_dir=None, src=None):
+def get_folder_images(folder_path, src=None):
     """
     取得指定資料夾內的所有圖片，符合 EAGLE API 格式
-    """
-
-    """
     從任意資料夾（base_dir + folder_path）中取得圖片
     """
-    if base_dir is None:
-        base_dir = index_folder  # default to static/temp_for_display
+
+    if src == 'external':
+        base_dir = DB_route_external
+    else:
+        base_dir = DB_route_internal  # default to static/temp_for_display
 
     ### image_folder
     abs_folder_path = os.path.join(base_dir, folder_path)
@@ -82,7 +82,7 @@ def get_folder_images(folder_path, base_dir=None, src=None):
             temp1 = f"/serve_image/{image_path}"
         else:
             temp = f"/{image_path}"
-            temp1 = f"/{image_path}",
+            temp1 = f"/{image_path}"
 
         data.append({
             "name": img,
@@ -117,6 +117,7 @@ def get_eagle_folders():
         # 取得 Eagle 資料夾內的縮圖
         folder_response = EG.EAGLE_list_items(folders=[folder_id])
         image_items = folder_response.get("data", [])
+        image_items.sort(key=lambda x: x.get("name", ""))
         thumbnail_path = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_items[0]['id']}.info/{image_items[0]['name']}.{image_items[0]['ext']}" if image_items else "/static/default_thumbnail.jpg"
 
         data.append({
@@ -154,10 +155,13 @@ def get_eagle_images_by_folderid(eagle_folder_id):
         image_ext = image.get("ext", "jpg")
         image_path = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_id}.info/{image_name}.{image_ext}"
 
+        thumbnail_route = image_path  # 假設縮圖與原圖相同
+        if image_ext == "mp4":
+            thumbnail_route = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_id}.info/{image_name}_thumbnail.png"
         data.append({
             "name": image_name,
             # "path": image_path,
-            "thumbnail_route": image_path,  # 假設縮圖與原圖相同
+            "thumbnail_route": thumbnail_route,
             "url": image_path
         })
 

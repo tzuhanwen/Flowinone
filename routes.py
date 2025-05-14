@@ -1,8 +1,8 @@
 import os
 import random
 from flask import Flask, render_template, abort, send_from_directory, request
-from file_handler import get_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag
-from config import index_folder, DB_route
+from file_handler import get_all_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag
+from config import DB_route_internal, DB_route_external
 
 def register_routes_debug(app):
     @app.route('/debug/')
@@ -27,21 +27,18 @@ def register_routes(app):
 
         source = request.args.get('src', 'external')
 
-        metadata, data = get_folders_info(source)
+        metadata, data = get_all_folders_info(source)
         return render_template('index.html', metadata=metadata, data=data)
 
     @app.route('/both/<path:folder_path>/')
     def view_both(folder_path):
-        """取得指定資料夾內的所有圖片"""
-
+        """
+        取得指定資料夾內的所有圖片
+        src: internal or external
+        """
         source = request.args.get('src', 'external')
 
-        if source == 'external':
-            base_dir = DB_route
-        else:
-            base_dir = index_folder  # static 裡的資料夾
-
-        metadata, data = get_folder_images(folder_path, base_dir, source)
+        metadata, data = get_folder_images(folder_path, source)
         return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/grid/<path:folder_path>/')

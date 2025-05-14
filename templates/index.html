@@ -22,6 +22,8 @@
 {% block page_content %}
 <div class="container">
     <h1>{{ metadata.name }}</h1>
+    <!-- 📌 插入 metadata 區塊 -->
+    {% include 'components/_metadata_panel.html' %}
     <div class="image-grid">
         {% for item in data %}
         <div class="image-item">
