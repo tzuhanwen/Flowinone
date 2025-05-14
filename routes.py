@@ -53,7 +53,7 @@ def register_routes(app):
         metadata, data = get_folder_images(folder_path)
         return render_template('view_slide.html', metadata=metadata, data=data)
 
-    @app.route('/EAGLE_folder/')
+    @app.route('/EAGLE_folders/')
     def list_all_eagle_folder():
         """列出所有 Eagle 資料夾，並符合 EAGLE API 樣式"""
         metadata, data = get_eagle_folders()
@@ -63,6 +63,7 @@ def register_routes(app):
     def view_eagle_folder(eagle_folder_id):
         """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
         metadata, data = get_eagle_images_by_folderid(eagle_folder_id)
+        ### here get subfolders
         return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/serve_image/<path:image_path>')
