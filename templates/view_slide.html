@@ -17,7 +17,7 @@
 <div class="container">
     <h1>{{ metadata.name }}</h1>
     {% for image in data %}
-        <img src="{{ image.url }}" alt="Comic Image">
+        <img src="{{ image.thumbnail_route }}" alt="Comic Image">
     {% endfor %}
 </div>
 {% endblock %}
