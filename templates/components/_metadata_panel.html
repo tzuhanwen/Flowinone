@@ -25,6 +25,18 @@
   </p>
   {% endif %}
 
+  {% if metadata.filesystem_path %}
+  <p>
+    <strong>🗂️ 檔案位置：</strong>
+    <code>{{ metadata.filesystem_path }}</code>
+    <a href="{{ url_for('open_filesystem_path') }}?path={{ metadata.filesystem_path | urlencode }}"
+       class="btn btn-sm"
+       style="margin-left: 10px; background-color: #28a745; color: white; padding: 0.4em 0.8em; border-radius: 0.4em; text-decoration: none;">
+      開啟資料夾
+    </a>
+  </p>
+  {% endif %}
+
   {% if metadata.similar %}
   <p>
     <strong>🔗 相似作品：</strong>

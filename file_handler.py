@@ -85,7 +85,8 @@ def _build_folder_entry(display_name, abs_path, rel_path, src):
     return {
         "name": display_name,
         "thumbnail_route": _find_directory_thumbnail(abs_path, src),
-        "url": _build_folder_url(rel_path, src)
+        "url": _build_folder_url(rel_path, src),
+        "item_path": os.path.abspath(abs_path)
     }
 
 
@@ -94,7 +95,8 @@ def _build_image_entry(display_name, abs_path, src):
     return {
         "name": display_name,
         "thumbnail_route": file_route,
-        "url": file_route
+        "url": file_route,
+        "item_path": os.path.abspath(abs_path)
     }
 
 
@@ -102,7 +104,8 @@ def _build_video_entry(display_name, abs_path, rel_path, src):
     return {
         "name": display_name,
         "thumbnail_route": _find_video_thumbnail(abs_path, src),
-        "url": _build_video_url(rel_path, src)
+        "url": _build_video_url(rel_path, src),
+        "item_path": os.path.abspath(abs_path)
     }
 
 
@@ -175,7 +178,8 @@ def get_all_folders_info(src):
         "category": "collections",
         "tags": ["collection", "group", "Main"],
         "path": "/" if normalized_src == "external" else "/?src=internal",
-        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": os.path.abspath(base_dir)
     }
 
     data = _collect_directory_entries(base_dir, "", normalized_src)
@@ -200,7 +204,8 @@ def get_folder_images(folder_path, src=None):
         "category": "folder",
         "tags": ["grid", "slide", "test_tag_default"],
         "path": _build_folder_url(safe_folder_path, normalized_src),
-        "thumbnail_route": _find_directory_thumbnail(target_dir, normalized_src)
+        "thumbnail_route": _find_directory_thumbnail(target_dir, normalized_src),
+        "filesystem_path": os.path.abspath(target_dir)
     }
 
     data = _collect_directory_entries(base_dir, safe_folder_path, normalized_src)
@@ -231,7 +236,8 @@ def get_video_details(video_path, src=None):
         "category": "video",
         "tags": [],
         "path": _build_video_url(safe_video_path, normalized_src),
-        "thumbnail_route": thumbnail_route
+        "thumbnail_route": thumbnail_route,
+        "filesystem_path": os.path.abspath(os.path.dirname(target_path))
     }
 
     parent_relative = _normalize_slashes(os.path.dirname(safe_video_path))
@@ -265,7 +271,8 @@ def get_eagle_folders():
         "category": "collections",
         "tags": ["eagle", "folders"],
         "path": "/EAGLE_folder",
-        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": EG.EAGLE_get_current_library_path()
     }
 
     data = []
@@ -283,7 +290,8 @@ def get_eagle_folders():
             "name": folder_name,
             "id": folder_id,
             "url": f"/EAGLE_folder/{folder_id}/",
-            "thumbnail_route": thumbnail_path
+            "thumbnail_route": thumbnail_path,
+            "item_path": None
         })
 
     return metadata, data
@@ -308,7 +316,8 @@ def get_eagle_images_by_folderid(eagle_folder_id):
         "category": "folder",
         "tags": ["eagle", "images"],
         "path": f"/EAGLE_folder/{eagle_folder_id}",
-        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": EG.EAGLE_get_current_library_path()
     }
     image_items = response.get("data", [])
     data = _format_eagle_items(image_items)
@@ -335,7 +344,8 @@ def get_eagle_images_by_tag(target_tag):
         "category": "tag",
         "tags": [target_tag],
         "path": f"/EAGLE_tag/{target_tag}",
-        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": EG.EAGLE_get_current_library_path()
     }
 
     image_items = response.get("data", [])
@@ -365,7 +375,8 @@ def _format_eagle_items(image_items):
         data.append({
             "name": image_name,
             "url": image_path,
-            "thumbnail_route": thumbnail_route
+            "thumbnail_route": thumbnail_route,
+            "item_path": os.path.abspath(os.path.join(base, "images", f"{image_id}.info", f"{image_name}.{image_ext}"))
         })
 
     return data
@@ -409,7 +420,8 @@ def get_subfolders_info(folder_id):
         result.append({
             "name": f"📁 {sub_name}",
             "url": path,
-            "thumbnail_route": thumbnail_route
+            "thumbnail_route": thumbnail_route,
+            "item_path": None
         })
 
     return result

@@ -1,5 +1,8 @@
 import os
-from flask import Flask, render_template, abort, send_from_directory, request
+import platform
+import subprocess
+from urllib.parse import unquote
+from flask import Flask, render_template, abort, send_from_directory, request, redirect, url_for
 from file_handler import (
     get_all_folders_info,
     get_folder_images,
@@ -10,6 +13,32 @@ from file_handler import (
     get_subfolders_info,
 )
 from config import DB_route_internal, DB_route_external
+
+
+def _path_is_within_roots(target_path, roots):
+    """Ensure the requested path stays inside one of the configured roots."""
+    try:
+        normalized_target = os.path.abspath(target_path)
+        for root in roots:
+            if not root:
+                continue
+            normalized_root = os.path.abspath(root)
+            if os.path.commonpath([normalized_target, normalized_root]) == normalized_root:
+                return True
+    except ValueError:
+        return False
+    return False
+
+
+def _open_in_file_manager(target_path):
+    """Open a folder in the host file manager."""
+    system = platform.system()
+    if system == "Darwin":
+        subprocess.Popen(["open", target_path])
+    elif system == "Windows":
+        os.startfile(target_path)  # type: ignore[attr-defined]
+    else:
+        subprocess.Popen(["xdg-open", target_path])
 
 def register_routes_debug(app):
     @app.route('/debug/')
@@ -36,6 +65,32 @@ def register_routes(app):
 
         metadata, data = get_all_folders_info(source)
         return render_template('index.html', metadata=metadata, data=data)
+    
+    @app.route('/open_path/')
+    def open_filesystem_path():
+        """Open the requested path in the local file manager."""
+        raw_path = request.args.get('path')
+        if not raw_path:
+            abort(400)
+
+        decoded_path = os.path.abspath(unquote(raw_path))
+        if not os.path.exists(decoded_path):
+            abort(404)
+
+        allowed_roots = [DB_route_external, DB_route_internal]
+        if not _path_is_within_roots(decoded_path, allowed_roots):
+            abort(403)
+
+        target_directory = decoded_path if os.path.isdir(decoded_path) else os.path.dirname(decoded_path)
+        if not target_directory:
+            abort(404)
+
+        try:
+            _open_in_file_manager(target_directory)
+        except Exception as exc:
+            abort(500, description=f"Failed to open path: {exc}")
+
+        return redirect(request.referrer or url_for('index'))
 
     @app.route('/both/<path:folder_path>/')
     def view_both(folder_path):
