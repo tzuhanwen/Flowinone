@@ -1,7 +1,14 @@
 import os
-import random
 from flask import Flask, render_template, abort, send_from_directory, request
-from file_handler import get_all_folders_info, get_folder_images, get_eagle_folders, get_eagle_images_by_folderid, get_eagle_images_by_tag, get_subfolders_info
+from file_handler import (
+    get_all_folders_info,
+    get_folder_images,
+    get_video_details,
+    get_eagle_folders,
+    get_eagle_images_by_folderid,
+    get_eagle_images_by_tag,
+    get_subfolders_info,
+)
 from config import DB_route_internal, DB_route_external
 
 def register_routes_debug(app):
@@ -76,6 +83,13 @@ def register_routes(app):
         directory, filename = os.path.split(image_path)
         directory = '/' + directory
         return send_from_directory(directory, filename)
+
+    @app.route('/video/<path:video_path>')
+    def view_video(video_path):
+        """顯示影片播放頁面"""
+        source = request.args.get('src', 'external')
+        metadata, video = get_video_details(video_path, source)
+        return render_template('video_player.html', metadata=metadata, video=video)
     
     @app.route('/EAGLE_tag/<target_tag>/')
     def view_images_by_tag(target_tag):

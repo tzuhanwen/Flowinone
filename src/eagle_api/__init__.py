@@ -69,8 +69,41 @@ def EAGLE_get_folders_df() -> pd.DataFrame:
     df = pd.DataFrame(folders_data)
     return df
 
+def EAGLE_get_folders_df_all(flatten: bool = True) -> pd.DataFrame:
+    """
+    获取 Eagle 文件夹列表，并将其转换为 Pandas DataFrame。
+    如果 flatten=True，會遞迴展開所有 children folders 合併成一張表。
 
+    Returns:
+        pd.DataFrame: 包含所有資料夾（包括子資料夾）的資訊。
+    """
+    response = EAGLE_get_folders()
+    if response.get("status") != "success":
+        print(f"Error fetching folders: {response.get('data')}")
+        return pd.DataFrame()
 
+    folders_data = response.get("data", [])
+    if not folders_data:
+        print("No folder data found.")
+        return pd.DataFrame()
+
+    all_folders = []
+
+    def extract_folder_info(folder, parent_name=""):
+        # 加入當前資料夾
+        info = folder.copy()
+        info["parentName"] = parent_name
+        info.pop("children", None)  # 暫時移除 children，避免 DataFrame 爆掉
+        all_folders.append(info)
+
+        # 遞迴加入 children 資訊
+        for child in folder.get("children", []):
+            extract_folder_info(child, parent_name=folder.get("name"))
+
+    for folder in folders_data:
+        extract_folder_info(folder)
+
+    return pd.DataFrame(all_folders)
 
 def EAGLE_create_folder(folderName: str): #tags: Optional[List[str]] = None
     """

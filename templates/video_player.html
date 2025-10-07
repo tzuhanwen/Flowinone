@@ -1,0 +1,51 @@
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/button_styles.css') }}">
+<style>
+    .video-wrapper {
+        margin: 20px 0;
+        background-color: #111;
+        padding: 10px;
+        border-radius: 8px;
+    }
+    .video-wrapper video {
+        width: 100%;
+        max-height: 70vh;
+    }
+    .video-meta {
+        margin: 20px 0;
+        line-height: 1.6;
+    }
+    .action-buttons {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+    }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+    <h1>{{ metadata.name }}</h1>
+    {% include 'components/_metadata_panel.html' %}
+
+    <div class="video-wrapper">
+        <video controls preload="metadata" poster="{{ video.thumbnail_route }}">
+            <source src="{{ video.source_url }}" type="{{ video.mime_type }}">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+
+    <div class="video-meta">
+        <p><strong>📄 路徑：</strong> {{ video.relative_path }}</p>
+        <p><strong>📦 大小：</strong> {{ video.size_display }}</p>
+        <p><strong>🕒 更新時間：</strong> {{ video.modified_time }}</p>
+    </div>
+
+    <div class="action-buttons">
+        <a href="{{ video.parent_url }}" class="button">返回上一層</a>
+        <a href="{{ video.download_url }}" class="button" download>下載影片</a>
+    </div>
+</div>
+{% endblock %}
