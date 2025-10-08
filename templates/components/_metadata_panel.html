@@ -25,6 +25,19 @@
   </p>
   {% endif %}
 
+  {% if metadata.folders %}
+  <p>
+    <strong>📁 所在資料夾：</strong>
+    {% for folder in metadata.folders %}
+      <a href="{{ folder.url }}"
+         class="badge badge-secondary"
+         style="margin-right: 5px; background-color: #6c757d; color: white; padding: 0.3em 0.6em; border-radius: 0.5em; text-decoration: none;">
+        {{ folder.name }}
+      </a>
+    {% endfor %}
+  </p>
+  {% endif %}
+
   {% if metadata.filesystem_path %}
   <p>
     <strong>🗂️ 檔案位置：</strong>

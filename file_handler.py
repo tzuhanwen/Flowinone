@@ -1,4 +1,5 @@
 import os
+from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import quote
 import mimetypes
@@ -309,7 +310,8 @@ def get_eagle_images_by_folderid(eagle_folder_id):
     # if row.empty:
     #     return []
     # folder_name = row.iloc[0]["name"]
-    folder_name = eagle_folder_id
+    folder_links = _build_eagle_folder_links([eagle_folder_id])
+    folder_name = folder_links[0]["name"] if folder_links else eagle_folder_id
 
     metadata = {
         "name": folder_name,
@@ -317,7 +319,8 @@ def get_eagle_images_by_folderid(eagle_folder_id):
         "tags": ["eagle", "images"],
         "path": f"/EAGLE_folder/{eagle_folder_id}",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path()
+        "filesystem_path": EG.EAGLE_get_current_library_path(),
+        "folders": folder_links
     }
     image_items = response.get("data", [])
     data = _format_eagle_items(image_items)
@@ -406,6 +409,99 @@ def get_eagle_tags():
 
     return metadata, tags
 
+def _extract_folder_ids(raw_folders):
+    """
+    將 Eagle 回傳的 folder 資訊整理成 id list。
+    """
+    if not raw_folders:
+        return []
+
+    ids = OrderedDict()
+
+    if not isinstance(raw_folders, (list, tuple, set)):
+        raw_folders = [raw_folders]
+
+    for entry in raw_folders:
+        folder_id = None
+        if isinstance(entry, str):
+            folder_id = entry
+        elif isinstance(entry, dict):
+            folder_id = (
+                entry.get("id")
+                or entry.get("folderId")
+                or entry.get("folder_id")
+            )
+        if folder_id:
+            folder_id = str(folder_id).strip()
+            if folder_id:
+                ids.setdefault(folder_id, None)
+
+    return list(ids.keys())
+
+
+def _build_eagle_folder_links(folder_ids):
+    """
+    將 folder id 轉換成可供前端使用的連結資訊。
+    """
+    folder_ids = _extract_folder_ids(folder_ids)
+    if not folder_ids:
+        return []
+
+    try:
+        df = EG.EAGLE_get_folders_df_all(flatten=True)
+    except Exception:
+        df = None
+
+    lookup = {}
+    if df is not None and getattr(df, "empty", True) is False:
+        for _, row in df.iterrows():
+            row_id = str(row.get("id") or "").strip()
+            if not row_id:
+                continue
+            lookup[row_id] = row.get("name") or row_id
+
+    links = []
+    seen = OrderedDict()
+    for folder_id in folder_ids:
+        if folder_id in seen:
+            continue
+        seen[folder_id] = None
+        folder_name = lookup.get(folder_id, folder_id)
+        links.append({
+            "id": folder_id,
+            "name": folder_name,
+            "url": f"/EAGLE_folder/{folder_id}/"
+        })
+
+    links.sort(key=lambda item: item["name"].lower())
+    return links
+
+
+def _normalize_item_tags(raw_tags):
+    """
+    將 Eagle item 的標籤轉換成字串 list。
+    """
+    if not raw_tags:
+        return []
+
+    tags = OrderedDict()
+    if isinstance(raw_tags, str):
+        raw_tags = [raw_tags]
+
+    for entry in raw_tags:
+        tag = None
+        if isinstance(entry, str):
+            tag = entry
+        elif isinstance(entry, dict):
+            tag = entry.get("name") or entry.get("tag")
+        if tag:
+            normalized = tag.strip()
+            if normalized:
+                tags.setdefault(normalized, None)
+
+    return list(tags.keys())
+
+
 def get_eagle_video_details(item_id):
     """
     從 Eagle API 取得單一影片項目的詳細資訊並組合成播放器頁面需要的結構。
@@ -475,10 +571,14 @@ def get_eagle_video_details(item_id):
                 break
 
     tags = item.get("tags") or []
-    if isinstance(tags, str):
-        tags = [tags]
+    tags = _normalize_item_tags(tags)
 
     original_url = item.get("website") or item.get("url")
+    folder_ids = _extract_folder_ids(item.get("folders"))
+    fallback_folder = item.get("folderId") or item.get("folder_id")
+    if not folder_ids and fallback_folder:
+        folder_ids = _extract_folder_ids([fallback_folder])
+    folder_links = _build_eagle_folder_links(folder_ids)
 
     metadata = {
         "name": item.get("name") or os.path.basename(video_path),
@@ -487,7 +587,8 @@ def get_eagle_video_details(item_id):
         "path": f"/EAGLE_video/{item_id}/",
         "thumbnail_route": thumbnail_route,
         "filesystem_path": normalized_abs_path,
-        "description": item.get("annotation") or item.get("note")
+        "description": item.get("annotation") or item.get("note"),
+        "folders": folder_links
     }
 
     video_data = {
@@ -501,10 +602,104 @@ def get_eagle_video_details(item_id):
         "size_display": _human_readable_size(file_size),
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": None,
-        "download_url": stream_route
+        "download_url": stream_route,
+        "folders": folder_links
     }
 
     return metadata, video_data
+
+def get_eagle_image_details(item_id):
+    """
+    從 Eagle API 取得單一圖片項目的詳細資訊並組合成展示頁面需要的結構。
+    """
+    response = EG.EAGLE_get_item_info(item_id)
+    if response.get("status") != "success":
+        abort(500, description=f"Failed to fetch Eagle item info: {response.get('data')}")
+
+    item = response.get("data")
+    if not item or isinstance(item, list):
+        abort(404, description="Image item not found.")
+
+    raw_ext = item.get("ext") or ""
+    ext = raw_ext.lower().lstrip(".")
+    file_name = item.get("name") or item_id
+    file_name_with_ext = item.get("fileName")
+
+    base_library_path = EG.EAGLE_get_current_library_path()
+    item_dir = os.path.join(base_library_path, "images", f"{item_id}.info")
+
+    candidate_files = []
+    if file_name_with_ext:
+        candidate_files.append(file_name_with_ext)
+    if file_name:
+        candidate_files.append(f"{file_name}.{ext}" if ext else file_name)
+    candidate_files.append(f"{item_id}.{ext}" if ext else item_id)
+
+    image_path = None
+    resolved_ext = ext
+    for candidate in candidate_files:
+        if not candidate:
+            continue
+        candidate_path = os.path.join(item_dir, candidate)
+        if os.path.isfile(candidate_path):
+            resolved_ext = os.path.splitext(candidate)[1].lstrip(".").lower()
+            if resolved_ext in IMAGE_EXTENSIONS:
+                image_path = candidate_path
+                break
+
+    if image_path is None and os.path.isdir(item_dir):
+        for entry in os.listdir(item_dir):
+            entry_ext = os.path.splitext(entry)[1].lstrip(".").lower()
+            if entry_ext in IMAGE_EXTENSIONS:
+                image_path = os.path.join(item_dir, entry)
+                resolved_ext = entry_ext
+                break
+
+    if image_path is None:
+        abort(404, description="Image file not found on disk.")
+
+    normalized_abs_path = _normalize_slashes(os.path.abspath(image_path))
+    relative_path = _normalize_slashes(os.path.relpath(image_path, base_library_path))
+    file_size = os.path.getsize(image_path)
+    modified_time = datetime.fromtimestamp(os.path.getmtime(image_path))
+
+    stream_route = f"/serve_image/{normalized_abs_path}"
+
+    tags = _normalize_item_tags(item.get("tags"))
+    original_url = item.get("website") or item.get("url")
+    folder_ids = _extract_folder_ids(item.get("folders"))
+    fallback_folder = item.get("folderId") or item.get("folder_id")
+    if not folder_ids and fallback_folder:
+        folder_ids = _extract_folder_ids([fallback_folder])
+    folder_links = _build_eagle_folder_links(folder_ids)
+
+    metadata = {
+        "name": item.get("name") or os.path.basename(image_path),
+        "category": "eagle-image",
+        "tags": tags,
+        "path": f"/EAGLE_image/{item_id}/",
+        "thumbnail_route": stream_route,
+        "filesystem_path": normalized_abs_path,
+        "description": item.get("annotation") or item.get("note"),
+        "folders": folder_links
+    }
+
+    image_data = {
+        "name": metadata["name"],
+        "relative_path": relative_path,
+        "source_url": stream_route,
+        "original_url": original_url,
+        "thumbnail_route": stream_route,
+        "mime_type": mimetypes.guess_type(image_path)[0] or f"image/{resolved_ext or 'jpeg'}",
+        "size_bytes": file_size,
+        "size_display": _human_readable_size(file_size),
+        "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
+        "parent_url": None,
+        "download_url": stream_route,
+        "folders": folder_links
+    }
+
+    return metadata, image_data
 
 def _format_eagle_items(image_items):
     """

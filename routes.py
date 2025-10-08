@@ -11,6 +11,7 @@ from file_handler import (
     get_eagle_images_by_folderid,
     get_eagle_images_by_tag,
     get_eagle_tags,
+    get_eagle_image_details,
     get_eagle_video_details,
     get_subfolders_info,
 )
@@ -145,6 +146,8 @@ def register_routes(app):
         for item in data:
             if item.get("media_type") == "video" and item.get("id"):
                 item["url"] = url_for("view_eagle_video", item_id=item["id"], return_to=current_url)
+            elif item.get("media_type") == "image" and item.get("id"):
+                item["url"] = url_for("view_eagle_image", item_id=item["id"], return_to=current_url)
         
         return render_template('view_both.html', metadata=metadata, data=data)
 
@@ -182,6 +185,8 @@ def register_routes(app):
         for item in data:
             if item.get("media_type") == "video" and item.get("id"):
                 item["url"] = url_for("view_eagle_video", item_id=item["id"], return_to=current_url)
+            elif item.get("media_type") == "image" and item.get("id"):
+                item["url"] = url_for("view_eagle_image", item_id=item["id"], return_to=current_url)
 
         return render_template('view_both.html', metadata=metadata, data=data)
 
@@ -195,3 +200,14 @@ def register_routes(app):
         else:
             video["parent_url"] = request.referrer or url_for("index")
         return render_template('video_player.html', metadata=metadata, video=video)
+
+    @app.route('/EAGLE_image/<item_id>/')
+    def view_eagle_image(item_id):
+        """顯示 Eagle 圖片的詳細資訊與展示頁面"""
+        metadata, image = get_eagle_image_details(item_id)
+        return_to = request.args.get("return_to")
+        if return_to:
+            image["parent_url"] = return_to
+        else:
+            image["parent_url"] = request.referrer or url_for("index")
+        return render_template('image_viewer.html', metadata=metadata, image=image)

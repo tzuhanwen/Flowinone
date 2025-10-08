@@ -1,0 +1,62 @@
+<!-- templates/image_viewer.html -->
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/button_styles.css') }}">
+<style>
+  .image-wrapper {
+    margin: 20px 0;
+    background-color: #111;
+    padding: 10px;
+    border-radius: 8px;
+    text-align: center;
+  }
+
+  .image-wrapper img {
+    max-width: 100%;
+    height: auto;
+  }
+
+  .image-meta {
+    margin: 20px 0;
+    line-height: 1.6;
+  }
+
+  .action-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+  <h1>{{ metadata.name }}</h1>
+  {% include 'components/_metadata_panel.html' %}
+
+  <div class="image-wrapper">
+    <img src="{{ image.source_url }}" alt="{{ image.name }}">
+  </div>
+
+  <div class="image-meta">
+    <p><strong>📄 路徑：</strong> {{ image.relative_path }}</p>
+    <p><strong>📦 大小：</strong> {{ image.size_display }}</p>
+    <p><strong>🕒 更新時間：</strong> {{ image.modified_time }}</p>
+    {% if image.original_url %}
+    <p>
+      <strong>🔗 來源：</strong>
+      <a href="{{ image.original_url }}" target="_blank" rel="noopener">
+        {{ image.original_url }}
+      </a>
+    </p>
+    {% endif %}
+  </div>
+
+  <div class="action-buttons">
+    <a href="{{ image.parent_url }}" class="button">返回上一層</a>
+    <a href="{{ image.download_url }}" class="button" download>下載圖片</a>
+  </div>
+</div>
+{% endblock %}
+
