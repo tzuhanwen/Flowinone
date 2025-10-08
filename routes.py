@@ -12,6 +12,7 @@ from file_handler import (
     get_eagle_images_by_folderid,
     get_eagle_images_by_tag,
     get_eagle_tags,
+    search_eagle_items,
     get_eagle_image_details,
     get_eagle_video_details,
     get_subfolders_info,
@@ -185,6 +186,27 @@ def register_routes(app):
             渲染的 HTML 頁面，顯示所有具有該標籤的圖片。
         """
         metadata, data = get_eagle_images_by_tag(target_tag)
+
+        current_url = request.full_path
+        if current_url and current_url.endswith('?'):
+            current_url = current_url[:-1]
+
+        for item in data:
+            if item.get("media_type") == "video" and item.get("id"):
+                item["url"] = url_for("view_eagle_video", item_id=item["id"], return_to=current_url)
+            elif item.get("media_type") == "image" and item.get("id"):
+                item["url"] = url_for("view_eagle_image", item_id=item["id"], return_to=current_url)
+
+        return render_template('view_both.html', metadata=metadata, data=data)
+
+    @app.route('/search')
+    def search_eagle():
+        """使用 Eagle API 搜尋並顯示結果。"""
+        keyword = request.args.get('query', '').strip()
+        if not keyword:
+            return redirect(request.referrer or url_for('index'))
+
+        metadata, data = search_eagle_items(keyword)
 
         current_url = request.full_path
         if current_url and current_url.endswith('?'):

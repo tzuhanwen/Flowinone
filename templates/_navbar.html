@@ -7,7 +7,7 @@
     </div>
 
     <div class="search-container">
-        <form action="/search" method="GET">
+        <form action="{{ url_for('search_eagle') }}" method="GET">
             <input type="text" placeholder="Search..." name="query">
             <button type="submit">Search</button>
         </form>

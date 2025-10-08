@@ -505,6 +505,26 @@ def get_eagle_tags():
 
     return metadata, tags
 
+def search_eagle_items(keyword, limit=120):
+    """透過 Eagle API 搜尋關鍵字並回傳格式化後的列表。"""
+    response = EG.EAGLE_list_items(keyword=keyword, limit=limit, orderBy="CREATEDATE")
+    if response.get("status") != "success":
+        abort(500, description=f"Failed to search Eagle items: {response.get('data')}")
+
+    raw_items = response.get("data", [])
+    data = _format_eagle_items(raw_items)
+
+    metadata = {
+        "name": f"Search Results: {keyword}",
+        "category": "search",
+        "tags": [keyword],
+        "path": f"/search?query={keyword}",
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": EG.EAGLE_get_current_library_path()
+    }
+
+    return metadata, data
+
 def _extract_folder_ids(raw_folders):
     """
     將 Eagle 回傳的 folder 資訊整理成 id list。

@@ -340,7 +340,6 @@ def EAGLE_list_items(limit: int = 200, offset: int = 0, orderBy: Optional[str] =
     }
     # 过滤掉值为 None 的键
     payload = {k: v for k, v in payload.items() if v is not None}
-    print(payload)
 
     # 使用通用请求函数
     return send_request_to_eagle("item/list", "GET", payload)
