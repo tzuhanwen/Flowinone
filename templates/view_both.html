@@ -2,109 +2,237 @@
 {% extends 'base_template.html' %}
 
 {% block custom_style %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/grid_styles.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/button_styles.css') }}">
 <style>
-    .image-grid, .single-page {
-        display: none;  /* 默认隐藏 */
+  :root {
+    --gallery-bg: #f7f8fc;
+    --gallery-card-bg: #fff;
+    --gallery-border: #e3e6f0;
+    --gallery-accent: #4a6cf7;
+    --gallery-accent-hover: #354dcc;
+    --gallery-text: #1f2937;
+    --gallery-subtext: #6b7280;
+  }
+
+  body {
+    background-color: var(--gallery-bg);
+  }
+
+  .container.gallery {
+    max-width: 1200px;
+  }
+
+  .gallery-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--gallery-card-bg);
+    border: 1px solid var(--gallery-border);
+    border-radius: 12px;
+    box-shadow: 0 8px 18px rgba(26, 35, 126, 0.08);
+    margin-bottom: 24px;
+  }
+
+  .toolbar-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .toolbar-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--gallery-text);
+  }
+
+  .toolbar-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--gallery-border);
+    background-color: var(--gallery-card-bg);
+    color: var(--gallery-text);
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease-in-out;
+  }
+
+  .toolbar-button:hover {
+    border-color: var(--gallery-accent);
+    color: var(--gallery-accent);
+    box-shadow: 0 4px 10px rgba(74, 108, 247, 0.18);
+  }
+
+  .toolbar-button.is-active {
+    background-color: var(--gallery-accent);
+    color: #fff;
+    border-color: transparent;
+    box-shadow: 0 6px 14px rgba(74, 108, 247, 0.28);
+  }
+
+  .gallery-grid,
+  .gallery-single {
+    display: none;
+  }
+
+  .gallery-grid.is-visible {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+
+  .gallery-single.is-visible {
+    display: grid;
+    gap: 16px;
+  }
+
+  .image-card {
+    position: relative;
+    overflow: hidden;
+    border-radius: 14px;
+    background: var(--gallery-card-bg);
+    border: 1px solid var(--gallery-border);
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+
+  .image-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 16px 24px rgba(17, 24, 39, 0.12);
+  }
+
+  .image-card img {
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+    display: block;
+  }
+
+  .image-card .card-overlay {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0.8) 100%);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+
+  .gallery-single img {
+    width: 100%;
+    max-width: 780px;
+    margin: 0 auto;
+    border-radius: 14px;
+    border: 1px solid var(--gallery-border);
+    box-shadow: 0 14px 28px rgba(15, 23, 42, 0.1);
+  }
+
+  @media (max-width: 768px) {
+    .gallery-toolbar {
+      flex-direction: column;
+      align-items: stretch;
     }
-    .visible {
-        display: block;  /* 只有带有 visible 类的元素显示 */
+
+    .toolbar-group {
+      justify-content: space-between;
     }
-    .image-grid.visible {  
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-        grid-gap: 20px;
-    }
-    img {
-        display: block;
-        width: 75%;
-        margin-bottom: 20px;
-        border: 1px solid #ddd;
-        margin: 0 auto 20px;  /* 上下边距分别是 0 和 20px，左右边距自动居中 */
-    }
+  }
 </style>
 {% endblock %}
 
 {% block page_content %}
-<div class="container">
+<div class="container gallery">
     <h1>{{ metadata.name }}</h1>
     <!-- 📌 插入 metadata 區塊 -->
     {% include 'components/_metadata_panel.html' %}
 
-    <!-- 添加切换排序的按钮 -->
-    <button id="sortButton" class="button">Toggle Sort</button>
-    <div class="toggle-button" onclick="toggleView()">Switch View</div>
-    <a href="/" class="button">Home</a>
+    <div class="gallery-toolbar">
+      <div class="toolbar-group">
+        <span class="toolbar-title">展示選項</span>
+      </div>
+      <div class="toolbar-group">
+        <button id="sortButton" class="toolbar-button" data-direction="asc">
+          ⬇️ 排序 A → Z
+        </button>
+        <button id="viewToggleGrid" class="toolbar-button is-active" data-view="grid">
+          ⬛ 網格
+        </button>
+        <button id="viewToggleSingle" class="toolbar-button" data-view="single">
+          📄 單頁
+        </button>
+      </div>
+    </div>
 
     <!-- Grid View -->
-    <div id="gridView" class="image-grid visible">
+    <div id="gridView" class="gallery-grid is-visible">
         {% for image in data %}
-        <div class="image-item" data-url="{{ image.url }}">
-            <a href="{{ image.url }}">
-                <img src="{{ image.thumbnail_route }}" alt="Image">
-                <div class="image-overlay">
-                    <span>{{ image.name }}</span>
-                </div>
-            </a>
+        <div class="image-card" data-name="{{ image.name|lower }}">
+          <a href="{{ image.url }}">
+            <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+            <div class="card-overlay">{{ image.name }}</div>
+          </a>
         </div>
         {% endfor %}
     </div>
 
     <!-- Single Page View -->
-    <div id="singlePageView" class="single-page">
+    <div id="singlePageView" class="gallery-single">
         {% for image in data %}
-        <img src="{{ image.thumbnail_route }}" alt="Comic Image">
+        <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
         {% endfor %}
     </div>
 </div>
 
 <script>
-    // 确保脚本在页面加载后执行
-    window.onload = function() {
-        let isAscending = true; // 当前排序状态
+  document.addEventListener('DOMContentLoaded', function () {
+    const sortButton = document.getElementById('sortButton');
+    const gridView = document.getElementById('gridView');
+    const singleView = document.getElementById('singlePageView');
+    const gridToggle = document.getElementById('viewToggleGrid');
+    const singleToggle = document.getElementById('viewToggleSingle');
 
-        function toggleSort() {
-            // 获取 gridView 中的所有图片项
-            const gridView = document.getElementById('gridView');
-            const items = Array.from(gridView.children);
+    function setActiveView(view) {
+      if (view === 'grid') {
+        gridView.classList.add('is-visible');
+        singleView.classList.remove('is-visible');
+        gridToggle.classList.add('is-active');
+        singleToggle.classList.remove('is-active');
+      } else {
+        singleView.classList.add('is-visible');
+        gridView.classList.remove('is-visible');
+        singleToggle.classList.add('is-active');
+        gridToggle.classList.remove('is-active');
+      }
+    }
 
-            // 根据排序状态调整顺序
-            items.sort((a, b) => {
-                const pathA = a.getAttribute('data-url');
-                const pathB = b.getAttribute('data-url');
-                return isAscending ? pathA.localeCompare(pathB) : pathB.localeCompare(pathA);
-            });
+    function toggleSortDirection() {
+      const direction = sortButton.dataset.direction === 'asc' ? 'desc' : 'asc';
+      sortButton.dataset.direction = direction;
+      sortButton.textContent = direction === 'asc' ? '⬇️ 排序 A → Z' : '⬆️ 排序 Z → A';
 
-            // 更新 DOM 顺序
-            items.forEach(item => gridView.appendChild(item));
+      const items = Array.from(gridView.children);
+      items.sort((a, b) => {
+        const nameA = a.getAttribute('data-name') || '';
+        const nameB = b.getAttribute('data-name') || '';
+        const comparison = nameA.localeCompare(nameB);
+        return direction === 'asc' ? comparison : -comparison;
+      });
 
-            // 切换排序状态
-            isAscending = !isAscending;
-        }
+      items.forEach(item => gridView.appendChild(item));
+    }
 
-        // 绑定事件到按钮
-        document.getElementById('sortButton').onclick = toggleSort;
+    sortButton.addEventListener('click', toggleSortDirection);
+    gridToggle.addEventListener('click', () => setActiveView('grid'));
+    singleToggle.addEventListener('click', () => setActiveView('single'));
 
-        // 切换视图功能
-        function toggleView() {
-            // console.log("Switch View button clicked"); // 调试信息
-            var gridView = document.getElementById('gridView');
-            var singlePageView = document.getElementById('singlePageView');
-
-            if (gridView.classList.contains('visible')) {
-                // console.log("Switching to Single Page View");
-                gridView.classList.remove('visible');
-                singlePageView.classList.add('visible');
-            } else {
-                // console.log("Switching to Grid View");
-                singlePageView.classList.remove('visible');
-                gridView.classList.add('visible');
-            }
-        }
-
-        // 将函数赋值给按钮的点击事件
-        document.querySelector('.toggle-button').onclick = toggleView;
-    };
+    // initialize state
+    setActiveView('grid');
+  });
 </script>
 {% endblock %}

@@ -215,7 +215,7 @@ def get_folder_images(folder_path, src=None):
     metadata = {
         "name": os.path.basename(safe_folder_path.rstrip("/")) if safe_folder_path else os.path.basename(os.path.normpath(base_dir)),
         "category": "folder",
-        "tags": ["grid", "slide", "test_tag_default"],
+        "tags": [],
         "path": _build_folder_url(safe_folder_path, normalized_src),
         "thumbnail_route": _find_directory_thumbnail(target_dir, normalized_src),
         "filesystem_path": os.path.abspath(target_dir)
@@ -406,16 +406,27 @@ def get_eagle_images_by_folderid(eagle_folder_id):
     # if row.empty:
     #     return []
     # folder_name = row.iloc[0]["name"]
-    folder_links = _build_eagle_folder_links([eagle_folder_id])
-    folder_name = folder_links[0]["name"] if folder_links else eagle_folder_id
+    folder_links = []
+    current_folder, parent_folder = _get_eagle_folder_context(eagle_folder_id)
+    if parent_folder:
+        parent_id = parent_folder.get("id")
+        parent_name = parent_folder.get("name", parent_id)
+        if parent_id:
+            folder_links.append({
+                "id": parent_id,
+                "name": parent_name,
+                "url": f"/EAGLE_folder/{parent_id}/"
+            })
+
+    folder_name = current_folder.get("name") if current_folder else eagle_folder_id
 
     metadata = {
         "name": folder_name,
         "category": "folder",
-        "tags": ["eagle", "images"],
+        "tags": [],
         "path": f"/EAGLE_folder/{eagle_folder_id}",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path(),
+        "filesystem_path": None,
         "folders": folder_links
     }
     image_items = response.get("data", [])
@@ -616,6 +627,32 @@ def _normalize_item_tags(raw_tags):
                 tags.setdefault(normalized, None)
 
     return list(tags.keys())
+
+
+def _get_eagle_folder_context(folder_id):
+    """
+    取得指定 Eagle 資料夾及其父資料夾資訊。
+    Returns (current_folder, parent_folder)
+    """
+    response = EG.EAGLE_get_library_info()
+    if response.get("status") != "success":
+        return None, None
+
+    folders = response.get("data", {}).get("folders", [])
+
+    def _search(nodes, parent=None):
+        for node in nodes:
+            if node.get("id") == folder_id:
+                return node, parent
+            result = _search(node.get("children", []), node)
+            if result is not None:
+                return result
+        return None
+
+    found = _search(folders)
+    if not found:
+        return None, None
+    return found
 
 
 def _build_local_similar_items(target_path, base_dir, src, limit=6):
