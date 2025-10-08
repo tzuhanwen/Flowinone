@@ -1,4 +1,5 @@
 import os
+import random
 from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import quote
@@ -35,6 +36,15 @@ def _build_file_route(abs_path, src):
     if src == "external":
         return f"/serve_image/{normalized}"
     return f"/{normalized}"
+
+def _build_image_url(rel_path, src):
+    normalized_src = _normalize_source(src)
+    normalized_path = _normalize_slashes(rel_path or "")
+    quoted_path = quote(normalized_path, safe="/")
+    query = "?src=external" if normalized_src == "external" else "?src=internal"
+    if quoted_path:
+        return f"/image/{quoted_path}{query}"
+    return f"/image/{query}"
 
 
 def _build_folder_url(rel_path, src):
@@ -91,13 +101,14 @@ def _build_folder_entry(display_name, abs_path, rel_path, src):
     }
 
 
-def _build_image_entry(display_name, abs_path, src):
+def _build_image_entry(display_name, abs_path, rel_path, src):
     file_route = _build_file_route(abs_path, src)
     return {
         "name": display_name,
         "thumbnail_route": file_route,
-        "url": file_route,
-        "item_path": os.path.abspath(abs_path)
+        "url": _build_image_url(rel_path, src),
+        "item_path": os.path.abspath(abs_path),
+        "media_type": "image"
     }
 
 
@@ -106,7 +117,8 @@ def _build_video_entry(display_name, abs_path, rel_path, src):
         "name": display_name,
         "thumbnail_route": _find_video_thumbnail(abs_path, src),
         "url": _build_video_url(rel_path, src),
-        "item_path": os.path.abspath(abs_path)
+        "item_path": os.path.abspath(abs_path),
+        "media_type": "video"
     }
 
 
@@ -132,7 +144,7 @@ def _collect_directory_entries(base_dir, relative_path, src):
         if os.path.isdir(abs_entry):
             folders.append(_build_folder_entry(entry, abs_entry, rel_entry, normalized_src))
         elif _is_image_file(entry):
-            files.append(_build_image_entry(entry, abs_entry, normalized_src))
+            files.append(_build_image_entry(entry, abs_entry, rel_entry, normalized_src))
         elif _is_video_file(entry):
             files.append(_build_video_entry(entry, abs_entry, rel_entry, normalized_src))
 
@@ -232,32 +244,116 @@ def get_video_details(video_path, src=None):
     source_url = _build_file_route(target_path, normalized_src)
     mime_type = mimetypes.guess_type(file_name)[0] or "video/mp4"
 
+    parent_relative = _normalize_slashes(os.path.dirname(safe_video_path))
+    parent_url = _build_folder_url(parent_relative, normalized_src) if parent_relative else ("/" if normalized_src == "external" else "/?src=internal")
+
+    folder_links = []
+    if parent_relative:
+        folder_links.append({
+            "name": os.path.basename(parent_relative) or parent_relative,
+            "url": parent_url
+        })
+    else:
+        root_name = os.path.basename(os.path.normpath(DB_route_external if normalized_src == "external" else DB_route_internal)) or "Root"
+        folder_links.append({
+            "name": root_name,
+            "url": parent_url
+        })
+
+    similar_items = _build_local_similar_items(target_path, base_dir, normalized_src, limit=6)
+
     metadata = {
         "name": file_name,
         "category": "video",
         "tags": [],
         "path": _build_video_url(safe_video_path, normalized_src),
         "thumbnail_route": thumbnail_route,
-        "filesystem_path": os.path.abspath(os.path.dirname(target_path))
+        "filesystem_path": os.path.abspath(os.path.dirname(target_path)),
+        "folders": folder_links,
+        "similar": similar_items
     }
-
-    parent_relative = _normalize_slashes(os.path.dirname(safe_video_path))
-    parent_url = _build_folder_url(parent_relative, normalized_src) if parent_relative else ("/" if normalized_src == "external" else "/?src=internal")
 
     video_data = {
         "name": file_name,
         "relative_path": safe_video_path,
         "source_url": source_url,
         "thumbnail_route": thumbnail_route,
+        "original_url": None,
         "mime_type": mime_type,
         "size_bytes": file_size,
         "size_display": _human_readable_size(file_size),
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": parent_url,
-        "download_url": source_url
+        "download_url": source_url,
+        "folders": folder_links
     }
 
     return metadata, video_data
+
+
+def get_image_details(image_path, src=None):
+    """
+    取得圖片詳細資訊與展示所需路徑。
+    """
+    normalized_src = _normalize_source(src)
+    safe_image_path = _safe_relative_path(image_path)
+    base_dir = DB_route_external if normalized_src == "external" else DB_route_internal
+    target_path = os.path.join(base_dir, safe_image_path) if safe_image_path else base_dir
+
+    if not os.path.isfile(target_path) or not _is_image_file(target_path):
+        abort(404)
+
+    file_name = os.path.basename(safe_image_path) if safe_image_path else os.path.basename(target_path)
+    file_size = os.path.getsize(target_path)
+    modified_time = datetime.fromtimestamp(os.path.getmtime(target_path))
+    source_url = _build_file_route(target_path, normalized_src)
+    mime_type = mimetypes.guess_type(file_name)[0] or "image/jpeg"
+
+    parent_relative = _normalize_slashes(os.path.dirname(safe_image_path))
+    parent_url = _build_folder_url(parent_relative, normalized_src) if parent_relative else ("/" if normalized_src == "external" else "/?src=internal")
+
+    folder_links = []
+    if parent_relative:
+        folder_links.append({
+            "name": os.path.basename(parent_relative) or parent_relative,
+            "url": parent_url
+        })
+    else:
+        root_name = os.path.basename(os.path.normpath(DB_route_external if normalized_src == "external" else DB_route_internal)) or "Root"
+        folder_links.append({
+            "name": root_name,
+            "url": parent_url
+        })
+
+    similar_items = _build_local_similar_items(target_path, base_dir, normalized_src, limit=6)
+
+    metadata = {
+        "name": file_name,
+        "category": "image",
+        "tags": [],
+        "path": _build_image_url(safe_image_path, normalized_src),
+        "thumbnail_route": source_url,
+        "filesystem_path": os.path.abspath(target_path),
+        "folders": folder_links,
+        "similar": similar_items
+    }
+
+    image_data = {
+        "name": file_name,
+        "relative_path": safe_image_path,
+        "source_url": source_url,
+        "thumbnail_route": source_url,
+        "original_url": None,
+        "mime_type": mime_type,
+        "size_bytes": file_size,
+        "size_display": _human_readable_size(file_size),
+        "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
+        "parent_url": parent_url,
+        "download_url": source_url,
+        "folders": folder_links
+    }
+
+    return metadata, image_data
 
 def get_eagle_folders():
     """
@@ -502,6 +598,126 @@ def _normalize_item_tags(raw_tags):
     return list(tags.keys())
 
 
+def _build_local_similar_items(target_path, base_dir, src, limit=6):
+    """
+    根據同資料夾內容挑選相似的本地項目。
+    """
+    parent_dir = os.path.dirname(target_path)
+    try:
+        entries = os.listdir(parent_dir)
+    except (FileNotFoundError, PermissionError):
+        return []
+
+    candidates = []
+    for entry in entries:
+        if entry.startswith("."):
+            continue
+        abs_entry = os.path.join(parent_dir, entry)
+        if abs_entry == target_path or not os.path.isfile(abs_entry):
+            continue
+
+        try:
+            rel_entry = os.path.relpath(abs_entry, base_dir)
+        except ValueError:
+            continue
+        rel_entry = _normalize_slashes(rel_entry)
+
+        if _is_image_file(entry):
+            candidates.append({
+                "id": rel_entry,
+                "name": os.path.splitext(entry)[0] or entry,
+                "path": _build_image_url(rel_entry, src),
+                "thumbnail_route": _build_file_route(abs_entry, src),
+                "media_type": "image"
+            })
+        elif _is_video_file(entry):
+            candidates.append({
+                "id": rel_entry,
+                "name": os.path.splitext(entry)[0] or entry,
+                "path": _build_video_url(rel_entry, src),
+                "thumbnail_route": _find_video_thumbnail(abs_entry, src),
+                "media_type": "video"
+            })
+
+    if not candidates:
+        return []
+
+    sample_size = min(limit, len(candidates))
+    if sample_size <= 0:
+        return []
+
+    return random.sample(candidates, sample_size)
+
+
+def _build_eagle_similar_items(current_item_id, tags, folder_ids, limit=6):
+    """
+    根據標籤或資料夾推薦相似項目。
+    """
+    candidate_map = OrderedDict()
+
+    def _accumulate_from_response(response):
+        if response.get("status") != "success":
+            return
+        for raw in response.get("data", []) or []:
+            other_id = raw.get("id")
+            if not other_id or other_id == current_item_id:
+                continue
+            if other_id in candidate_map:
+                continue
+            candidate_map[other_id] = raw
+
+    primary_tags = tags[:2] if tags else []
+    for tag in primary_tags:
+        try:
+            resp = EG.EAGLE_list_items(tags=[tag], limit=120, orderBy="MODIFIEDDATE")
+        except Exception:
+            continue
+        _accumulate_from_response(resp)
+        if len(candidate_map) >= limit * 2:
+            break
+
+    if not candidate_map and folder_ids:
+        primary_folders = folder_ids[:2]
+        for folder_id in primary_folders:
+            try:
+                resp = EG.EAGLE_list_items(folders=[folder_id], limit=120, orderBy="MODIFIEDDATE")
+            except Exception:
+                continue
+            _accumulate_from_response(resp)
+            if len(candidate_map) >= limit * 2:
+                break
+
+    if not candidate_map:
+        return []
+
+    candidate_list = list(candidate_map.values())
+    sample_size = min(limit, len(candidate_list))
+    if sample_size == 0:
+        return []
+
+    sampled_raw = random.sample(candidate_list, sample_size)
+    formatted_candidates = _format_eagle_items(sampled_raw)
+    formatted_map = {item["id"]: item for item in formatted_candidates if item.get("id")}
+
+    similar_items = []
+    for raw in sampled_raw:
+        item_id = raw.get("id")
+        formatted = formatted_map.get(item_id)
+        if not formatted:
+            continue
+        media_type = formatted.get("media_type")
+        detail_path = f"/EAGLE_video/{item_id}/" if media_type == "video" else f"/EAGLE_image/{item_id}/"
+        similar_items.append({
+            "id": item_id,
+            "name": formatted.get("name") or "Untitled",
+            "path": detail_path,
+            "thumbnail_route": formatted.get("thumbnail_route") or DEFAULT_THUMBNAIL_ROUTE,
+            "media_type": media_type
+        })
+
+    return similar_items
+
+
 def get_eagle_video_details(item_id):
     """
     從 Eagle API 取得單一影片項目的詳細資訊並組合成播放器頁面需要的結構。
@@ -579,6 +795,7 @@ def get_eagle_video_details(item_id):
     if not folder_ids and fallback_folder:
         folder_ids = _extract_folder_ids([fallback_folder])
     folder_links = _build_eagle_folder_links(folder_ids)
+    similar_items = _build_eagle_similar_items(item_id, tags, folder_ids)
 
     metadata = {
         "name": item.get("name") or os.path.basename(video_path),
@@ -588,7 +805,8 @@ def get_eagle_video_details(item_id):
         "thumbnail_route": thumbnail_route,
         "filesystem_path": normalized_abs_path,
         "description": item.get("annotation") or item.get("note"),
-        "folders": folder_links
+        "folders": folder_links,
+        "similar": similar_items
     }
 
     video_data = {
@@ -672,6 +890,7 @@ def get_eagle_image_details(item_id):
     if not folder_ids and fallback_folder:
         folder_ids = _extract_folder_ids([fallback_folder])
     folder_links = _build_eagle_folder_links(folder_ids)
+    similar_items = _build_eagle_similar_items(item_id, tags, folder_ids)
 
     metadata = {
         "name": item.get("name") or os.path.basename(image_path),
@@ -681,7 +900,8 @@ def get_eagle_image_details(item_id):
         "thumbnail_route": stream_route,
         "filesystem_path": normalized_abs_path,
         "description": item.get("annotation") or item.get("note"),
-        "folders": folder_links
+        "folders": folder_links,
+        "similar": similar_items
     }
 
     image_data = {

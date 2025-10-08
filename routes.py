@@ -6,6 +6,7 @@ from flask import Flask, render_template, abort, send_from_directory, request, r
 from file_handler import (
     get_all_folders_info,
     get_folder_images,
+    get_image_details,
     get_video_details,
     get_eagle_folders,
     get_eagle_images_by_folderid,
@@ -164,6 +165,13 @@ def register_routes(app):
         source = request.args.get('src', 'external')
         metadata, video = get_video_details(video_path, source)
         return render_template('video_player.html', metadata=metadata, video=video)
+
+    @app.route('/image/<path:image_path>')
+    def view_image(image_path):
+        """顯示圖片展示頁面"""
+        source = request.args.get('src', 'external')
+        metadata, image = get_image_details(image_path, source)
+        return render_template('image_viewer.html', metadata=metadata, image=image)
     
     @app.route('/EAGLE_tag/<target_tag>/')
     def view_images_by_tag(target_tag):
