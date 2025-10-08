@@ -455,7 +455,7 @@ def get_eagle_images_by_tag(target_tag):
         "tags": [target_tag],
         "path": f"/EAGLE_tag/{target_tag}",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path()
+        "filesystem_path": None
     }
 
     image_items = response.get("data", [])
@@ -508,10 +508,10 @@ def get_eagle_tags():
     metadata = {
         "name": "EAGLE Tags",
         "category": "tag-list",
-        "tags": ["eagle", "tags"],
+        "tags": [],
         "path": "/EAGLE_tags",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path()
+        "filesystem_path": None
     }
 
     return metadata, tags
