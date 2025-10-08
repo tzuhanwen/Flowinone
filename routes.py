@@ -10,6 +10,8 @@ from file_handler import (
     get_eagle_folders,
     get_eagle_images_by_folderid,
     get_eagle_images_by_tag,
+    get_eagle_tags,
+    get_eagle_video_details,
     get_subfolders_info,
 )
 from config import DB_route_internal, DB_route_external
@@ -121,6 +123,12 @@ def register_routes(app):
         metadata, data = get_eagle_folders()
         return render_template("index.html", metadata=metadata, data=data)
 
+    @app.route('/EAGLE_tags/')
+    def list_eagle_tags():
+        """列出 Eagle 中的所有標籤並提供連結"""
+        metadata, tags = get_eagle_tags()
+        return render_template("eagle_tags.html", metadata=metadata, tags=tags)
+
     @app.route('/EAGLE_folder/<eagle_folder_id>/')
     def view_eagle_folder(eagle_folder_id):
         """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
@@ -129,6 +137,14 @@ def register_routes(app):
         # 加入子資料夾為類似圖片格式
         subfolders = get_subfolders_info(eagle_folder_id)
         data = subfolders + data
+
+        current_url = request.full_path
+        if current_url and current_url.endswith('?'):
+            current_url = current_url[:-1]
+
+        for item in data:
+            if item.get("media_type") == "video" and item.get("id"):
+                item["url"] = url_for("view_eagle_video", item_id=item["id"], return_to=current_url)
         
         return render_template('view_both.html', metadata=metadata, data=data)
 
@@ -158,4 +174,24 @@ def register_routes(app):
             渲染的 HTML 頁面，顯示所有具有該標籤的圖片。
         """
         metadata, data = get_eagle_images_by_tag(target_tag)
+
+        current_url = request.full_path
+        if current_url and current_url.endswith('?'):
+            current_url = current_url[:-1]
+
+        for item in data:
+            if item.get("media_type") == "video" and item.get("id"):
+                item["url"] = url_for("view_eagle_video", item_id=item["id"], return_to=current_url)
+
         return render_template('view_both.html', metadata=metadata, data=data)
+
+    @app.route('/EAGLE_video/<item_id>/')
+    def view_eagle_video(item_id):
+        """顯示 Eagle 影片的詳細資訊與播放器頁面"""
+        metadata, video = get_eagle_video_details(item_id)
+        return_to = request.args.get("return_to")
+        if return_to:
+            video["parent_url"] = return_to
+        else:
+            video["parent_url"] = request.referrer or url_for("index")
+        return render_template('video_player.html', metadata=metadata, video=video)

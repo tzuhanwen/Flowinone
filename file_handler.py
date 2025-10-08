@@ -352,6 +352,160 @@ def get_eagle_images_by_tag(target_tag):
     data = _format_eagle_items(image_items)
     return metadata, data
 
+def get_eagle_tags():
+    """
+    從 Eagle API 取得所有標籤資訊，整理給前端使用。
+    """
+    response = EG.EAGLE_get_tags()
+    if response.get("status") != "success":
+        abort(500, description=f"Failed to fetch Eagle tags: {response.get('data')}")
+
+    raw_data = response.get("data", [])
+    if isinstance(raw_data, dict):
+        tag_entries = raw_data.get("tags") or raw_data.get("data") or []
+    else:
+        tag_entries = raw_data or []
+
+    tags = []
+    for entry in tag_entries:
+        if isinstance(entry, dict):
+            tag_name = entry.get("name") or entry.get("tag") or entry.get("title")
+            count_value = (
+                entry.get("count")
+                or entry.get("itemCount")
+                or entry.get("itemsCount")
+                or entry.get("childCount")
+            )
+        else:
+            tag_name = str(entry)
+            count_value = None
+
+        if not tag_name:
+            continue
+
+        try:
+            count = int(count_value) if count_value is not None else None
+        except (TypeError, ValueError):
+            count = None
+
+        tags.append({
+            "name": tag_name,
+            "count": count
+        })
+
+    tags.sort(key=lambda item: item["name"].lower())
+
+    metadata = {
+        "name": "EAGLE Tags",
+        "category": "tag-list",
+        "tags": ["eagle", "tags"],
+        "path": "/EAGLE_tags",
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": EG.EAGLE_get_current_library_path()
+    }
+
+    return metadata, tags
+
+def get_eagle_video_details(item_id):
+    """
+    從 Eagle API 取得單一影片項目的詳細資訊並組合成播放器頁面需要的結構。
+    """
+    response = EG.EAGLE_get_item_info(item_id)
+    if response.get("status") != "success":
+        abort(500, description=f"Failed to fetch Eagle item info: {response.get('data')}")
+
+    item = response.get("data")
+    if not item or isinstance(item, list):
+        abort(404, description="Video item not found.")
+
+    raw_ext = item.get("ext") or ""
+    ext = raw_ext.lower().lstrip(".")
+    file_name = item.get("name") or item_id
+    file_name_with_ext = item.get("fileName")
+
+    if not ext and file_name_with_ext:
+        _, inferred_ext = os.path.splitext(file_name_with_ext)
+        ext = inferred_ext.lower().lstrip(".")
+
+    if ext not in VIDEO_EXTENSIONS:
+        abort(404, description="Requested Eagle item is not a video.")
+
+    base_library_path = EG.EAGLE_get_current_library_path()
+    item_dir = os.path.join(base_library_path, "images", f"{item_id}.info")
+
+    candidate_files = []
+    if file_name:
+        candidate_files.append(f"{file_name}.{ext}")
+    if file_name_with_ext:
+        candidate_files.append(file_name_with_ext)
+    candidate_files.append(f"{item_id}.{ext}")
+
+    video_path = None
+    for candidate in candidate_files:
+        candidate_path = os.path.join(item_dir, candidate)
+        if os.path.isfile(candidate_path):
+            video_path = candidate_path
+            break
+
+    if video_path is None and os.path.isdir(item_dir):
+        for entry in os.listdir(item_dir):
+            if _is_video_file(entry):
+                video_path = os.path.join(item_dir, entry)
+                file_name, ext = os.path.splitext(entry)
+                ext = ext.lstrip(".").lower()
+                break
+
+    if video_path is None:
+        abort(404, description="Video file not found on disk.")
+
+    normalized_abs_path = _normalize_slashes(os.path.abspath(video_path))
+    relative_path = _normalize_slashes(os.path.relpath(video_path, base_library_path))
+    file_size = os.path.getsize(video_path)
+    modified_time = datetime.fromtimestamp(os.path.getmtime(video_path))
+
+    stream_route = f"/serve_image/{normalized_abs_path}"
+
+    thumbnail_route = DEFAULT_VIDEO_THUMBNAIL_ROUTE
+    if os.path.isdir(item_dir):
+        stem = os.path.splitext(os.path.basename(video_path))[0]
+        for image_ext in IMAGE_EXTENSIONS:
+            candidate_thumb = os.path.join(item_dir, f"{stem}_thumbnail.{image_ext}")
+            if os.path.isfile(candidate_thumb):
+                thumbnail_route = f"/serve_image/{_normalize_slashes(os.path.abspath(candidate_thumb))}"
+                break
+
+    tags = item.get("tags") or []
+    if isinstance(tags, str):
+        tags = [tags]
+
+    original_url = item.get("website") or item.get("url")
+
+    metadata = {
+        "name": item.get("name") or os.path.basename(video_path),
+        "category": "eagle-video",
+        "tags": tags,
+        "path": f"/EAGLE_video/{item_id}/",
+        "thumbnail_route": thumbnail_route,
+        "filesystem_path": normalized_abs_path,
+        "description": item.get("annotation") or item.get("note")
+    }
+
+    video_data = {
+        "name": metadata["name"],
+        "relative_path": relative_path,
+        "source_url": stream_route,
+        "original_url": original_url,
+        "thumbnail_route": thumbnail_route,
+        "mime_type": mimetypes.guess_type(video_path)[0] or "video/mp4",
+        "size_bytes": file_size,
+        "size_display": _human_readable_size(file_size),
+        "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
+        "parent_url": None,
+        "download_url": stream_route
+    }
+
+    return metadata, video_data
+
 def _format_eagle_items(image_items):
     """
     將 Eagle 圖片清單格式化成 EAGLE API 樣式的 data list。
@@ -367,16 +521,21 @@ def _format_eagle_items(image_items):
         image_path = f"/serve_image/{base}/images/{image_id}.info/{image_name}.{image_ext}"
 
         # 特別處理影片縮圖
-        if image_ext == "mp4":
+        normalized_ext = (image_ext or "").lower()
+        is_video = normalized_ext in VIDEO_EXTENSIONS
+        if normalized_ext == "mp4":
             thumbnail_route = f"/serve_image/{base}/images/{image_id}.info/{image_name}_thumbnail.png"
         else:
             thumbnail_route = image_path
 
         data.append({
+            "id": image_id,
             "name": image_name,
             "url": image_path,
             "thumbnail_route": thumbnail_route,
-            "item_path": os.path.abspath(os.path.join(base, "images", f"{image_id}.info", f"{image_name}.{image_ext}"))
+            "item_path": os.path.abspath(os.path.join(base, "images", f"{image_id}.info", f"{image_name}.{image_ext}")),
+            "media_type": "video" if is_video else "image",
+            "ext": normalized_ext
         })
 
     return data

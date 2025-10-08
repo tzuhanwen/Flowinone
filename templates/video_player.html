@@ -41,6 +41,14 @@
         <p><strong>📄 路徑：</strong> {{ video.relative_path }}</p>
         <p><strong>📦 大小：</strong> {{ video.size_display }}</p>
         <p><strong>🕒 更新時間：</strong> {{ video.modified_time }}</p>
+        {% if video.original_url %}
+        <p>
+            <strong>🔗 來源：</strong>
+            <a href="{{ video.original_url }}" target="_blank" rel="noopener">
+                {{ video.original_url }}
+            </a>
+        </p>
+        {% endif %}
     </div>
 
     <div class="action-buttons">

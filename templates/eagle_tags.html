@@ -1,0 +1,66 @@
+<!-- templates/eagle_tags.html -->
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<style>
+  .tag-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    list-style: none;
+    padding: 0;
+    margin: 1.5rem 0;
+  }
+
+  .tag-list li {
+    margin: 0;
+  }
+
+  .tag-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.45rem 0.9rem;
+    border-radius: 999px;
+    background-color: #f0f2f5;
+    color: #333;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out;
+  }
+
+  .tag-chip:hover {
+    background-color: #d9e4ff;
+  }
+
+  .tag-count {
+    font-size: 0.9rem;
+    margin-left: 0.5rem;
+    color: #666;
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container">
+  <h1>{{ metadata.name }}</h1>
+  {% include 'components/_metadata_panel.html' %}
+
+  {% if tags %}
+    <ul class="tag-list">
+      {% for tag in tags %}
+        <li>
+          <a class="tag-chip" href="{{ url_for('view_images_by_tag', target_tag=tag.name) }}">
+            <span>{{ tag.name }}</span>
+            {% if tag.count is not none %}
+              <span class="tag-count">{{ tag.count }}</span>
+            {% endif %}
+          </a>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>找不到任何標籤。</p>
+  {% endif %}
+</div>
+{% endblock %}
+

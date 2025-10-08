@@ -229,6 +229,24 @@ def EAGLE_add_bookmark(url: str, name: str, tags: Optional[List[str]] = None):
 
 
 ############################################# 雜 #############################################
+def EAGLE_get_tags():
+    """
+    獲取 Eagle 庫中所有標籤。
+    """
+    return send_request_to_eagle("tag/list")
+
+def EAGLE_get_item_info(item_id: str):
+    """
+    取得指定項目的詳細資訊。
+    """
+    response = send_request_to_eagle("item/info", "GET", {"itemId": item_id})
+    if response.get("status") == "success":
+        return response
+
+    # 某些版本的 API 可能使用 id 參數。
+    return send_request_to_eagle("item/info", "GET", {"id": item_id})
+
+
 def EAGLE_get_application_info():
     """
     獲取 Eagle App 應用資訊。
@@ -350,5 +368,3 @@ def EAGLE_list_items(limit: int = 200, offset: int = 0, orderBy: Optional[str] =
 
 if __name__ == "__main__":
     print('This is EAGPE_api')
-
-
