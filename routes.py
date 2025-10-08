@@ -2,7 +2,7 @@ import os
 import platform
 import subprocess
 from urllib.parse import unquote
-from flask import Flask, render_template, abort, send_from_directory, request, redirect, url_for
+from flask import Flask, render_template, abort, send_from_directory, request, redirect, url_for, jsonify
 from file_handler import (
     get_all_folders_info,
     get_folder_images,
@@ -13,6 +13,7 @@ from file_handler import (
     get_eagle_images_by_tag,
     get_eagle_tags,
     search_eagle_items,
+    get_eagle_stream_items,
     get_eagle_image_details,
     get_eagle_video_details,
     get_subfolders_info,
@@ -219,6 +220,47 @@ def register_routes(app):
                 item["url"] = url_for("view_eagle_image", item_id=item["id"], return_to=current_url)
 
         return render_template('view_both.html', metadata=metadata, data=data)
+
+    @app.route('/EAGLE_stream/')
+    def eagle_stream():
+        """顯示無限滾動串流頁面"""
+        return render_template('eagle_stream.html')
+
+    @app.route('/api/EAGLE_stream/')
+    def eagle_stream_data():
+        """提供 Eagle 串流頁面使用的資料"""
+        try:
+            offset = int(request.args.get('offset', 0))
+            limit = int(request.args.get('limit', 30))
+        except ValueError:
+            abort(400, description="Invalid offset or limit")
+
+        limit = max(1, min(limit, 60))
+        offset = max(0, offset)
+
+        data = get_eagle_stream_items(offset=offset, limit=limit)
+        items = []
+        for item in data:
+            item_id = item.get("id")
+            if not item_id:
+                continue
+            if item.get("media_type") == "video":
+                detail_url = url_for("view_eagle_video", item_id=item_id)
+            else:
+                detail_url = url_for("view_eagle_image", item_id=item_id)
+
+            items.append({
+                "id": item_id,
+                "name": item.get("name"),
+                "thumbnail_route": item.get("thumbnail_route"),
+                "detail_url": detail_url,
+                "media_type": item.get("media_type"),
+            })
+
+        return jsonify({
+            "items": items,
+            "nextOffset": offset + len(items)
+        })
 
     @app.route('/EAGLE_video/<item_id>/')
     def view_eagle_video(item_id):

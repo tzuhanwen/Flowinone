@@ -536,6 +536,21 @@ def search_eagle_items(keyword, limit=120):
 
     return metadata, data
 
+def get_eagle_stream_items(offset=0, limit=30):
+    """
+    取得 Eagle 圖片/影片串流用的項目清單。
+    """
+    try:
+        response = EG.EAGLE_list_items(limit=limit, offset=offset, orderBy="CREATEDATE")
+    except Exception as exc:
+        abort(500, description=f"Failed to fetch Eagle stream items: {exc}")
+
+    if response.get("status") != "success":
+        abort(500, description=f"Failed to fetch Eagle stream items: {response.get('data')}")
+
+    raw_items = response.get("data", []) or []
+    return _format_eagle_items(raw_items)
+
 def _extract_folder_ids(raw_folders):
     """
     將 Eagle 回傳的 folder 資訊整理成 id list。

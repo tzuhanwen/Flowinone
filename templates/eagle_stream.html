@@ -1,0 +1,198 @@
+<!-- templates/eagle_stream.html -->
+{% extends 'base_template.html' %}
+
+{% block custom_style %}
+<style>
+  :root {
+    --stream-bg: #f5f7fb;
+    --stream-card-bg: #ffffff;
+    --stream-border: #e1e7f5;
+    --stream-text: #1f2937;
+    --stream-subtext: #6b7280;
+    --stream-accent: #4a6cf7;
+  }
+
+  body {
+    background: var(--stream-bg);
+  }
+
+  .stream-container {
+    max-width: 1100px;
+  }
+
+  .stream-header {
+    margin-bottom: 24px;
+  }
+
+  .stream-header h1 {
+    margin: 0 0 8px;
+  }
+
+  .stream-header p {
+    color: var(--stream-subtext);
+    margin: 0;
+  }
+
+  .stream-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 18px;
+  }
+
+  .stream-card {
+    position: relative;
+    border-radius: 14px;
+    overflow: hidden;
+    border: 1px solid var(--stream-border);
+    background: var(--stream-card-bg);
+    box-shadow: 0 10px 22px rgba(17, 24, 39, 0.1);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+
+  .stream-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 26px rgba(15, 23, 42, 0.15);
+  }
+
+  .stream-card img {
+    display: block;
+    width: 100%;
+    height: 220px;
+    object-fit: cover;
+  }
+
+  .stream-card .card-info {
+    position: absolute;
+    inset: auto 0 0 0;
+    padding: 10px 14px;
+    background: linear-gradient(180deg, rgba(17, 24, 39, 0) 0%, rgba(17, 24, 39, 0.8) 100%);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 500;
+  }
+
+  .stream-loader {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px 0 40px;
+    color: var(--stream-subtext);
+    gap: 10px;
+  }
+
+  .stream-loader .spinner {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 3px solid var(--stream-border);
+    border-top-color: var(--stream-accent);
+    animation: spin 0.9s linear infinite;
+  }
+
+  .stream-end {
+    text-align: center;
+    padding: 32px 0 48px;
+    color: var(--stream-subtext);
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="container stream-container">
+  <div class="stream-header">
+    <h1>EAGLE Stream</h1>
+    <p>往下滑動即可自動載入更多 EAGLE 圖片與影片。</p>
+  </div>
+
+  <div id="streamGrid" class="stream-grid"></div>
+
+  <div id="streamLoader" class="stream-loader">
+    <span class="spinner" aria-hidden="true"></span>
+    <span>載入中...</span>
+  </div>
+
+  <div id="streamEnd" class="stream-end" hidden>
+    沒有更多內容囉。
+  </div>
+</div>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const grid = document.getElementById('streamGrid');
+    const loader = document.getElementById('streamLoader');
+    const endMarker = document.getElementById('streamEnd');
+
+    let offset = 0;
+    const limit = 24;
+    let loading = false;
+    let reachedEnd = false;
+
+    async function loadItems() {
+      if (loading || reachedEnd) return;
+      loading = true;
+      loader.hidden = false;
+      endMarker.hidden = true;
+
+      try {
+        const response = await fetch(`/api/EAGLE_stream/?offset=${offset}&limit=${limit}`);
+        if (!response.ok) {
+          throw new Error(`Failed to load stream items: ${response.statusText}`);
+        }
+        const payload = await response.json();
+        const items = payload.items || [];
+
+        if (!items.length) {
+          reachedEnd = true;
+          endMarker.hidden = false;
+          loader.hidden = true;
+          return;
+        }
+
+        const fragment = document.createDocumentFragment();
+        items.forEach(item => {
+          const card = document.createElement('a');
+          card.className = 'stream-card';
+          card.href = item.detail_url;
+          card.innerHTML = `
+            <img src="${item.thumbnail_route}" alt="${item.name}">
+            <div class="card-info">${item.name}</div>
+          `;
+          fragment.appendChild(card);
+        });
+
+        grid.appendChild(fragment);
+        offset = payload.nextOffset ?? (offset + items.length);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        loading = false;
+        loader.hidden = true;
+      }
+    }
+
+    const observerTarget = document.createElement('div');
+    observerTarget.style.height = '1px';
+    observerTarget.style.width = '100%';
+    observerTarget.style.marginTop = '1px';
+    loader.parentNode.insertBefore(observerTarget, loader.nextSibling);
+
+    const observer = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          loadItems();
+        }
+      });
+    });
+
+    observer.observe(observerTarget);
+    loadItems();
+  });
+</script>
+{% endblock %}
+
