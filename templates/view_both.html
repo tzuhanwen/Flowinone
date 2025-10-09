@@ -76,7 +76,8 @@
   }
 
   .gallery-grid,
-  .gallery-single {
+  .gallery-single,
+  .gallery-linear {
     display: none;
   }
 
@@ -89,6 +90,50 @@
   .gallery-single.is-visible {
     display: grid;
     gap: 16px;
+  }
+
+  .gallery-linear.is-visible {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  .linear-strip {
+    display: flex;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid var(--gallery-border);
+    background-color: var(--gallery-card-bg);
+    box-shadow: 0 12px 22px rgba(15, 23, 42, 0.06);
+  }
+
+  .linear-strip img {
+    width: 260px;
+    height: auto;
+    border-radius: 12px;
+    object-fit: cover;
+    flex-shrink: 0;
+  }
+
+  .linear-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    color: var(--gallery-text);
+  }
+
+  .linear-meta h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+  }
+
+  .linear-actions {
+    margin-top: auto;
+    display: flex;
+    gap: 10px;
   }
 
   .image-card {
@@ -197,6 +242,9 @@
         <button id="viewToggleSingle" class="toolbar-button" data-view="single">
           📄 單頁
         </button>
+        <button id="viewToggleLinear" class="toolbar-button" data-view="linear">
+          📜 直列
+        </button>
       </div>
     </div>
 
@@ -239,6 +287,37 @@
         {% endif %}
         {% endfor %}
     </div>
+
+    <div id="linearView" class="gallery-linear">
+        {% for image in data %}
+        {% set media_type = image.media_type | default('image') %}
+        {% set badge_class = 'media-chip' %}
+        {% if media_type == 'folder' %}
+            {% set badge_label = '📁 Folder' %}
+            {% set badge_class = 'media-chip folder' %}
+        {% else %}
+            {% set badge_label = (image.ext if image.ext else media_type)|upper %}
+        {% endif %}
+        <div class="linear-strip">
+            <a href="{{ image.url }}">
+              <span class="{{ badge_class }}">{{ badge_label }}</span>
+              <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+            </a>
+            <div class="linear-meta">
+              <h3>{{ image.name }}</h3>
+              {% if image.description %}
+                <p>{{ image.description }}</p>
+              {% endif %}
+              <div class="linear-actions">
+                <a class="toolbar-button" href="{{ image.url }}">開啟</a>
+                {% if media_type != 'folder' %}
+                  <a class="toolbar-button" href="{{ image.thumbnail_route }}" download>下載</a>
+                {% endif %}
+              </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
 </div>
 
 <script>
@@ -246,20 +325,33 @@
     const sortButton = document.getElementById('sortButton');
     const gridView = document.getElementById('gridView');
     const singleView = document.getElementById('singlePageView');
+    const linearView = document.getElementById('linearView');
     const gridToggle = document.getElementById('viewToggleGrid');
     const singleToggle = document.getElementById('viewToggleSingle');
+    const linearToggle = document.getElementById('viewToggleLinear');
 
     function setActiveView(view) {
       if (view === 'grid') {
         gridView.classList.add('is-visible');
         singleView.classList.remove('is-visible');
+        linearView.classList.remove('is-visible');
         gridToggle.classList.add('is-active');
         singleToggle.classList.remove('is-active');
-      } else {
+        linearToggle.classList.remove('is-active');
+      } else if (view === 'single') {
         singleView.classList.add('is-visible');
         gridView.classList.remove('is-visible');
+        linearView.classList.remove('is-visible');
         singleToggle.classList.add('is-active');
         gridToggle.classList.remove('is-active');
+        linearToggle.classList.remove('is-active');
+      } else if (view === 'linear') {
+        linearView.classList.add('is-visible');
+        gridView.classList.remove('is-visible');
+        singleView.classList.remove('is-visible');
+        linearToggle.classList.add('is-active');
+        gridToggle.classList.remove('is-active');
+        singleToggle.classList.remove('is-active');
       }
     }
 
@@ -282,6 +374,7 @@
     sortButton.addEventListener('click', toggleSortDirection);
     gridToggle.addEventListener('click', () => setActiveView('grid'));
     singleToggle.addEventListener('click', () => setActiveView('single'));
+    linearToggle.addEventListener('click', () => setActiveView('linear'));
 
     // initialize state
     setActiveView('grid');
