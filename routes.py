@@ -255,6 +255,7 @@ def register_routes(app):
                 "thumbnail_route": item.get("thumbnail_route"),
                 "detail_url": detail_url,
                 "media_type": item.get("media_type"),
+                "ext": item.get("ext")
             })
 
         return jsonify({

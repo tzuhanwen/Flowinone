@@ -71,6 +71,24 @@
     font-weight: 500;
   }
 
+  .media-chip {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: rgba(17, 24, 39, 0.82);
+    color: #f9fafb;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .media-chip.folder {
+    background-color: rgba(55, 65, 81, 0.9);
+  }
+
   .stream-loader {
     display: flex;
     justify-content: center;
@@ -159,7 +177,12 @@
           const card = document.createElement('a');
           card.className = 'stream-card';
           card.href = item.detail_url;
+          const badgeLabel = item.media_type === 'folder'
+            ? '📁 Folder'
+            : (item.ext ? item.ext.toUpperCase() : (item.media_type || 'ITEM').toUpperCase());
+          const badgeClass = item.media_type === 'folder' ? 'media-chip folder' : 'media-chip';
           card.innerHTML = `
+            <span class="${badgeClass}">${badgeLabel}</span>
             <img src="${item.thumbnail_route}" alt="${item.name}">
             <div class="card-info">${item.name}</div>
           `;
@@ -195,4 +218,3 @@
   });
 </script>
 {% endblock %}
-

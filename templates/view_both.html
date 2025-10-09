@@ -124,6 +124,37 @@
     letter-spacing: 0.02em;
   }
 
+  .media-chip {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    background-color: rgba(17, 24, 39, 0.82);
+    color: #f9fafb;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+
+  .media-chip.folder {
+    background-color: rgba(55, 65, 81, 0.9);
+  }
+
+  .single-item {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .single-item .media-chip {
+    position: static;
+    align-self: flex-start;
+  }
+
   .gallery-single img {
     width: 100%;
     max-width: 780px;
@@ -172,8 +203,16 @@
     <!-- Grid View -->
     <div id="gridView" class="gallery-grid is-visible">
         {% for image in data %}
+        {% set media_type = image.media_type | default('image') %}
+        {% set badge_class = 'media-chip folder' if media_type == 'folder' else 'media-chip' %}
+        {% if media_type == 'folder' %}
+          {% set badge_label = '📁 Folder' %}
+        {% else %}
+          {% set badge_label = (image.ext if image.ext else media_type)|upper %}
+        {% endif %}
         <div class="image-card" data-name="{{ image.name|lower }}">
           <a href="{{ image.url }}">
+            <span class="{{ badge_class }}">{{ badge_label }}</span>
             <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
             <div class="card-overlay">{{ image.name }}</div>
           </a>
@@ -184,7 +223,20 @@
     <!-- Single Page View -->
     <div id="singlePageView" class="gallery-single">
         {% for image in data %}
-        <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+        {% set media_type = image.media_type | default('image') %}
+        {% if media_type != 'folder' %}
+          {% set badge_class = 'media-chip' %}
+          {% if media_type == 'folder' %}
+            {% set badge_label = '📁 Folder' %}
+            {% set badge_class = 'media-chip folder' %}
+          {% else %}
+            {% set badge_label = (image.ext if image.ext else media_type)|upper %}
+          {% endif %}
+          <div class="single-item">
+            <span class="{{ badge_class }}">{{ badge_label }}</span>
+            <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+          </div>
+        {% endif %}
         {% endfor %}
     </div>
 </div>

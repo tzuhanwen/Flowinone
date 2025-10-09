@@ -97,28 +97,34 @@ def _build_folder_entry(display_name, abs_path, rel_path, src):
         "name": display_name,
         "thumbnail_route": _find_directory_thumbnail(abs_path, src),
         "url": _build_folder_url(rel_path, src),
-        "item_path": os.path.abspath(abs_path)
+        "item_path": os.path.abspath(abs_path),
+        "media_type": "folder",
+        "ext": None
     }
 
 
 def _build_image_entry(display_name, abs_path, rel_path, src):
     file_route = _build_file_route(abs_path, src)
+    ext = os.path.splitext(display_name)[1].lstrip(".").lower()
     return {
         "name": display_name,
         "thumbnail_route": file_route,
         "url": _build_image_url(rel_path, src),
         "item_path": os.path.abspath(abs_path),
-        "media_type": "image"
+        "media_type": "image",
+        "ext": ext or None
     }
 
 
 def _build_video_entry(display_name, abs_path, rel_path, src):
+    ext = os.path.splitext(display_name)[1].lstrip(".").lower()
     return {
         "name": display_name,
         "thumbnail_route": _find_video_thumbnail(abs_path, src),
         "url": _build_video_url(rel_path, src),
         "item_path": os.path.abspath(abs_path),
-        "media_type": "video"
+        "media_type": "video",
+        "ext": ext or None
     }
 
 
@@ -238,6 +244,7 @@ def get_video_details(video_path, src=None):
         abort(404)
 
     file_name = os.path.basename(safe_video_path) if safe_video_path else os.path.basename(target_path)
+    file_ext = os.path.splitext(file_name)[1].lstrip(".").lower()
     file_size = os.path.getsize(target_path)
     modified_time = datetime.fromtimestamp(os.path.getmtime(target_path))
     thumbnail_route = _find_video_thumbnail(target_path, normalized_src)
@@ -270,7 +277,8 @@ def get_video_details(video_path, src=None):
         "thumbnail_route": thumbnail_route,
         "filesystem_path": os.path.abspath(os.path.dirname(target_path)),
         "folders": folder_links,
-        "similar": similar_items
+        "similar": similar_items,
+        "ext": file_ext or None
     }
 
     video_data = {
@@ -285,7 +293,8 @@ def get_video_details(video_path, src=None):
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": parent_url,
         "download_url": source_url,
-        "folders": folder_links
+        "folders": folder_links,
+        "ext": file_ext or None
     }
 
     return metadata, video_data
@@ -304,6 +313,7 @@ def get_image_details(image_path, src=None):
         abort(404)
 
     file_name = os.path.basename(safe_image_path) if safe_image_path else os.path.basename(target_path)
+    file_ext = os.path.splitext(file_name)[1].lstrip(".").lower()
     file_size = os.path.getsize(target_path)
     modified_time = datetime.fromtimestamp(os.path.getmtime(target_path))
     source_url = _build_file_route(target_path, normalized_src)
@@ -335,7 +345,8 @@ def get_image_details(image_path, src=None):
         "thumbnail_route": source_url,
         "filesystem_path": os.path.abspath(target_path),
         "folders": folder_links,
-        "similar": similar_items
+        "similar": similar_items,
+        "ext": file_ext or None
     }
 
     image_data = {
@@ -350,7 +361,8 @@ def get_image_details(image_path, src=None):
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": parent_url,
         "download_url": source_url,
-        "folders": folder_links
+        "folders": folder_links,
+        "ext": file_ext or None
     }
 
     return metadata, image_data
@@ -388,7 +400,9 @@ def get_eagle_folders():
             "id": folder_id,
             "url": f"/EAGLE_folder/{folder_id}/",
             "thumbnail_route": thumbnail_path,
-            "item_path": None
+            "item_path": None,
+            "media_type": "folder",
+            "ext": None
         })
 
     return metadata, data
@@ -700,7 +714,8 @@ def _build_local_similar_items(target_path, base_dir, src, limit=6):
                 "name": os.path.splitext(entry)[0] or entry,
                 "path": _build_image_url(rel_entry, src),
                 "thumbnail_route": _build_file_route(abs_entry, src),
-                "media_type": "image"
+                "media_type": "image",
+                "ext": os.path.splitext(entry)[1].lstrip(".").lower() or None
             })
         elif _is_video_file(entry):
             candidates.append({
@@ -708,7 +723,8 @@ def _build_local_similar_items(target_path, base_dir, src, limit=6):
                 "name": os.path.splitext(entry)[0] or entry,
                 "path": _build_video_url(rel_entry, src),
                 "thumbnail_route": _find_video_thumbnail(abs_entry, src),
-                "media_type": "video"
+                "media_type": "video",
+                "ext": os.path.splitext(entry)[1].lstrip(".").lower() or None
             })
 
     if not candidates:
@@ -784,7 +800,8 @@ def _build_eagle_similar_items(current_item_id, tags, folder_ids, limit=6):
             "name": formatted.get("name") or "Untitled",
             "path": detail_path,
             "thumbnail_route": formatted.get("thumbnail_route") or DEFAULT_THUMBNAIL_ROUTE,
-            "media_type": media_type
+            "media_type": media_type,
+            "ext": formatted.get("ext")
         })
 
     return similar_items
@@ -868,6 +885,7 @@ def get_eagle_video_details(item_id):
         folder_ids = _extract_folder_ids([fallback_folder])
     folder_links = _build_eagle_folder_links(folder_ids)
     similar_items = _build_eagle_similar_items(item_id, tags, folder_ids)
+    resolved_ext = ext or os.path.splitext(video_path)[1].lstrip(".").lower() or None
 
     metadata = {
         "name": item.get("name") or os.path.basename(video_path),
@@ -878,7 +896,8 @@ def get_eagle_video_details(item_id):
         "filesystem_path": normalized_abs_path,
         "description": item.get("annotation") or item.get("note"),
         "folders": folder_links,
-        "similar": similar_items
+        "similar": similar_items,
+        "ext": resolved_ext
     }
 
     video_data = {
@@ -893,7 +912,8 @@ def get_eagle_video_details(item_id):
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": None,
         "download_url": stream_route,
-        "folders": folder_links
+        "folders": folder_links,
+        "ext": resolved_ext
     }
 
     return metadata, video_data
@@ -973,7 +993,8 @@ def get_eagle_image_details(item_id):
         "filesystem_path": normalized_abs_path,
         "description": item.get("annotation") or item.get("note"),
         "folders": folder_links,
-        "similar": similar_items
+        "similar": similar_items,
+        "ext": resolved_ext or None
     }
 
     image_data = {
@@ -988,7 +1009,8 @@ def get_eagle_image_details(item_id):
         "modified_time": modified_time.strftime("%Y-%m-%d %H:%M"),
         "parent_url": None,
         "download_url": stream_route,
-        "folders": folder_links
+        "folders": folder_links,
+        "ext": resolved_ext or None
     }
 
     return metadata, image_data
@@ -1022,7 +1044,7 @@ def _format_eagle_items(image_items):
             "thumbnail_route": thumbnail_route,
             "item_path": os.path.abspath(os.path.join(base, "images", f"{image_id}.info", f"{image_name}.{image_ext}")),
             "media_type": "video" if is_video else "image",
-            "ext": normalized_ext
+            "ext": normalized_ext or None
         })
 
     return data
@@ -1067,7 +1089,9 @@ def get_subfolders_info(folder_id):
             "name": f"📁 {sub_name}",
             "url": path,
             "thumbnail_route": thumbnail_route,
-            "item_path": None
+            "item_path": None,
+            "media_type": "folder",
+            "ext": None
         })
 
     return result

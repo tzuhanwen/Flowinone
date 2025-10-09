@@ -61,6 +61,21 @@
     text-align: center;
   }
 
+  .media-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background-color: #111827;
+    color: #f9fafb;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
   .action-buttons {
     display: flex;
     gap: 10px;
@@ -72,6 +87,9 @@
 {% block page_content %}
 <div class="container">
   <h1>{{ metadata.name }}</h1>
+  {% if metadata.ext %}
+    <span class="media-pill">{{ metadata.ext | upper }}</span>
+  {% endif %}
   {% include 'components/_metadata_panel.html' %}
 
   <div class="image-wrapper">
