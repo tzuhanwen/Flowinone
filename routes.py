@@ -1,5 +1,6 @@
 import os
 import platform
+import random
 import subprocess
 from urllib.parse import unquote
 from flask import Flask, render_template, abort, send_from_directory, request, redirect, url_for, jsonify
@@ -65,12 +66,70 @@ def register_routes(app):
 
     @app.route('/')
     def index():
-        """獲取所有資料夾，並符合 EAGLE API 格式"""
+        """探索 Eagle 資料庫的首頁推薦"""
 
-        source = request.args.get('src', 'external')
+        hero_item = None
+        featured_media = []
+        random_images = []
+        random_videos = []
+        random_folders = []
+        eagle_tags = []
+        curated_clusters = []
 
-        metadata, data = get_all_folders_info(source)
-        return render_template('index.html', metadata=metadata, data=data)
+        try:
+            hero_payload = get_eagle_stream_items(offset=0, limit=10)
+            if hero_payload:
+                hero_item = hero_payload[0]
+                featured_media = hero_payload[1:5]
+
+            image_payload = get_eagle_stream_items(offset=20, limit=40)
+            image_only = [item for item in image_payload if item.get("media_type") == "image"]
+            video_only = [item for item in image_payload if item.get("media_type") == "video"]
+
+            if image_only:
+                random_images = random.sample(image_only, min(8, len(image_only)))
+            if video_only:
+                random_videos = random.sample(video_only, min(4, len(video_only)))
+
+            _, folder_data = get_eagle_folders()
+            if folder_data:
+                random_folders = random.sample(folder_data, min(6, len(folder_data)))
+
+            tag_metadata, tag_data = get_eagle_tags()
+            eagle_tags = random.sample(tag_data, min(20, len(tag_data))) if tag_data else []
+
+            if folder_data:
+                clusters_map = {}
+                for folder in folder_data:
+                    prefix = folder.get("name", "").split()[0]
+                    if not prefix:
+                        continue
+                    clusters_map.setdefault(prefix, []).append(folder)
+
+                for key, items in clusters_map.items():
+                    if len(items) < 2:
+                        continue
+                    curated_clusters.append({
+                        "title": f"{key} 精選合集",
+                        "items": items[:5]
+                    })
+
+            random.shuffle(curated_clusters)
+            curated_clusters = curated_clusters[:3]
+
+        except Exception:
+            pass
+
+        return render_template(
+            'index.html',
+            hero_item=hero_item,
+            featured_media=featured_media,
+            random_images=random_images,
+            random_videos=random_videos,
+            random_folders=random_folders,
+            eagle_tags=eagle_tags,
+            curated_clusters=curated_clusters
+        )
     
     @app.route('/open_path/')
     def open_filesystem_path():
@@ -125,7 +184,14 @@ def register_routes(app):
     def list_all_eagle_folder():
         """列出所有 Eagle 資料夾，並符合 EAGLE API 樣式"""
         metadata, data = get_eagle_folders()
-        return render_template("index.html", metadata=metadata, data=data)
+        return render_template('view_both.html', metadata=metadata, data=data)
+
+    @app.route('/collections/')
+    def view_collections():
+        """顯示 DB main 目錄，使用 view_both 版型"""
+        source = request.args.get('src', 'external')
+        metadata, data = get_all_folders_info(source)
+        return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/EAGLE_tags/')
     def list_eagle_tags():
