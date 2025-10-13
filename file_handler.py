@@ -1,3 +1,4 @@
+import json
 import os
 import random
 from collections import OrderedDict
@@ -6,7 +7,7 @@ from urllib.parse import quote
 import mimetypes
 import src.eagle_api as EG
 from flask import abort
-from config import DB_route_internal, DB_route_external
+from config import DB_route_internal, DB_route_external, CHROME_BOOKMARK_PATH
 
 
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
@@ -564,6 +565,126 @@ def get_eagle_stream_items(offset=0, limit=30):
 
     raw_items = response.get("data", []) or []
     return _format_eagle_items(raw_items)
+
+
+def _load_chrome_bookmarks():
+    if not os.path.exists(CHROME_BOOKMARK_PATH):
+        return {}
+    try:
+        with open(CHROME_BOOKMARK_PATH, "r", encoding="utf-8") as fh:
+            return json.load(fh)
+    except (json.JSONDecodeError, OSError):
+        abort(500, description="Failed to read Chrome bookmarks data")
+
+
+def _find_chrome_node(bookmarks_root, path_parts):
+    roots = bookmarks_root.get("roots", {}) if bookmarks_root else {}
+    if not path_parts:
+        return None, None, None
+
+    first = path_parts[0]
+    current = roots.get(first)
+    if current is None:
+        abort(404)
+
+    parent = None
+    parent_path = ""
+    current_path = first
+
+    for part in path_parts[1:]:
+        if current.get("type") != "folder":
+            abort(404)
+        next_node = None
+        for child in current.get("children", []):
+            if child.get("id") == part:
+                next_node = child
+                break
+        if next_node is None:
+            abort(404)
+        parent = current
+        parent_path = current_path
+        current = next_node
+        current_path = f"{current_path}/{part}"
+
+    return current, parent, parent_path
+
+
+def get_chrome_bookmarks(folder_path=None):
+    bookmarks = _load_chrome_bookmarks()
+    roots = bookmarks.get("roots", {})
+    safe_path = (folder_path or "bookmark_bar").strip("/")
+
+    if not roots:
+        abort(404)
+
+    parts = [part for part in safe_path.split("/") if part]
+    if not parts:
+        abort(404)
+
+    current, parent, parent_path = _find_chrome_node(bookmarks, parts)
+    if current is None:
+        abort(404)
+
+    data = []
+    current_name = current.get("name") or "(未命名資料夾)"
+    metadata = {
+        "name": current_name,
+        "category": "chrome",
+        "tags": ["chrome", "bookmarks"],
+        "path": f"/chrome/{quote(safe_path, safe='/')}",
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": CHROME_BOOKMARK_PATH
+    }
+
+    if parent:
+        parent_name = parent.get("name") or "上一層"
+        parent_url = "/chrome/" if not parent_path else f"/chrome/{quote(parent_path, safe='/')}"
+        metadata["folders"] = [{
+            "name": parent_name,
+            "url": parent_url
+        }]
+    else:
+        # 根節點時提供快速切換到其他根資料夾
+        for key in ["bookmark_bar", "other", "synced"]:
+            node = roots.get(key)
+            if not node or key == parts[0]:
+                continue
+            node_name = node.get("name") or key.replace("_", " ").title()
+            data.append({
+                "name": f"📁 {node_name}",
+                "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+                "url": f"/chrome/{quote(key, safe='/')}",
+                "item_path": None,
+                "media_type": "folder",
+                "ext": None
+            })
+
+    children = current.get("children", [])
+    for child in children:
+        child_type = child.get("type")
+        if child_type == "folder":
+            child_name = child.get("name") or "(未命名資料夾)"
+            child_path = f"{safe_path}/{child.get('id')}"
+            data.append({
+                "name": child_name,
+                "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+                "url": f"/chrome/{quote(child_path, safe='/')}",
+                "item_path": None,
+                "media_type": "folder",
+                "ext": None
+            })
+        elif child_type == "url":
+            child_name = child.get("name") or child.get("url")
+            data.append({
+                "name": child_name,
+                "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+                "url": child.get("url"),
+                "item_path": child.get("url"),
+                "media_type": "bookmark",
+                "ext": None
+            })
+
+    return metadata, data
 
 def _extract_folder_ids(raw_folders):
     """

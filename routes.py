@@ -15,6 +15,7 @@ from file_handler import (
     get_eagle_tags,
     search_eagle_items,
     get_eagle_stream_items,
+    get_chrome_bookmarks,
     get_eagle_image_details,
     get_eagle_video_details,
     get_subfolders_info,
@@ -191,6 +192,17 @@ def register_routes(app):
         """顯示 DB main 目錄，使用 view_both 版型"""
         source = request.args.get('src', 'external')
         metadata, data = get_all_folders_info(source)
+        return render_template('view_both.html', metadata=metadata, data=data)
+
+    @app.route('/chrome/')
+    def view_chrome_root():
+        """預設顯示書籤列 (bookmark_bar)。"""
+        return redirect(url_for('view_chrome_folder', folder_path='bookmark_bar'))
+
+    @app.route('/chrome/<path:folder_path>/')
+    def view_chrome_folder(folder_path):
+        """瀏覽 Chrome 書籤資料夾。"""
+        metadata, data = get_chrome_bookmarks(folder_path)
         return render_template('view_both.html', metadata=metadata, data=data)
 
     @app.route('/EAGLE_tags/')

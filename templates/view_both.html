@@ -259,7 +259,8 @@
           {% set badge_label = (image.ext if image.ext else media_type)|upper %}
         {% endif %}
         <div class="image-card" data-name="{{ image.name|lower }}">
-          <a href="{{ image.url }}">
+          {% set is_bookmark = image.media_type == 'bookmark' %}
+          <a href="{{ image.url }}" {% if is_bookmark %}target="_blank" rel="noopener noreferrer"{% endif %}>
             <span class="{{ badge_class }}">{{ badge_label }}</span>
             <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
             <div class="card-overlay">{{ image.name }}</div>
@@ -282,7 +283,9 @@
           {% endif %}
           <div class="single-item">
             <span class="{{ badge_class }}">{{ badge_label }}</span>
-            <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+            <a href="{{ image.url }}" {% if badge_label == 'BOOKMARK' or media_type == 'bookmark' %}target="_blank" rel="noopener noreferrer"{% endif %}>
+              <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
+            </a>
           </div>
         {% endif %}
         {% endfor %}
@@ -299,7 +302,7 @@
             {% set badge_label = (image.ext if image.ext else media_type)|upper %}
         {% endif %}
         <div class="linear-strip">
-            <a href="{{ image.url }}">
+            <a href="{{ image.url }}" {% if media_type == 'bookmark' %}target="_blank" rel="noopener noreferrer"{% endif %}>
               <span class="{{ badge_class }}">{{ badge_label }}</span>
               <img src="{{ image.thumbnail_route }}" alt="{{ image.name }}">
             </a>
@@ -309,8 +312,8 @@
                 <p>{{ image.description }}</p>
               {% endif %}
               <div class="linear-actions">
-                <a class="toolbar-button" href="{{ image.url }}">開啟</a>
-                {% if media_type != 'folder' %}
+                <a class="toolbar-button" href="{{ image.url }}" {% if media_type == 'bookmark' %}target="_blank" rel="noopener noreferrer"{% endif %}>開啟</a>
+                {% if media_type != 'folder' and media_type != 'bookmark' %}
                   <a class="toolbar-button" href="{{ image.thumbnail_route }}" download>下載</a>
                 {% endif %}
               </div>
