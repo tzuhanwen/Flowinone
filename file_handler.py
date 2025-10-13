@@ -16,6 +16,22 @@ DEFAULT_THUMBNAIL_ROUTE = "/static/default_thumbnail.svg"
 DEFAULT_VIDEO_THUMBNAIL_ROUTE = "/static/default_video_thumbnail.svg"
 
 
+def _extract_youtube_id(url):
+    if not url:
+        return None
+    if "youtube.com/watch" in url and "v=" in url:
+        return url.split("v=")[1].split("&")[0]
+    if "youtu.be/" in url:
+        return url.split("youtu.be/")[1].split("?")[0]
+    return None
+
+
+def _get_youtube_thumbnail(video_id):
+    if not video_id:
+        return None
+    return f"https://img.youtube.com/vi/{video_id}/hqdefault.jpg"
+
+
 def _normalize_source(src):
     return "external" if src == "external" else "internal"
 
@@ -675,16 +691,67 @@ def get_chrome_bookmarks(folder_path=None):
             })
         elif child_type == "url":
             child_name = child.get("name") or child.get("url")
+            video_id = _extract_youtube_id(child.get("url"))
+            thumbnail = _get_youtube_thumbnail(video_id) or DEFAULT_THUMBNAIL_ROUTE
+            ext = "youtube" if video_id else None
             data.append({
                 "name": child_name,
-                "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+                "thumbnail_route": thumbnail,
                 "url": child.get("url"),
                 "item_path": child.get("url"),
                 "media_type": "bookmark",
-                "ext": None
+                "ext": ext
             })
 
     return metadata, data
+
+
+def get_chrome_youtube_bookmarks():
+    bookmarks = _load_chrome_bookmarks()
+    roots = bookmarks.get("roots", {})
+    results = []
+
+    def _walk(node, path_labels):
+        node_type = node.get("type")
+        if node_type == "folder":
+            label = node.get("name") or "(未命名資料夾)"
+            new_path = path_labels + [label]
+            for child in node.get("children", []):
+                _walk(child, new_path)
+        elif node_type == "url":
+            url = node.get("url")
+            video_id = _extract_youtube_id(url)
+            if not video_id:
+                return
+            thumbnail = _get_youtube_thumbnail(video_id) or DEFAULT_THUMBNAIL_ROUTE
+            label = node.get("name") or url
+            results.append({
+                "name": label,
+                "thumbnail_route": thumbnail,
+                "url": url,
+                "item_path": url,
+                "media_type": "bookmark",
+                "ext": "youtube",
+                "description": " / ".join(filter(None, path_labels))
+            })
+
+    for key in ["bookmark_bar", "other", "synced", "mobile"]:
+        node = roots.get(key)
+        if not node:
+            continue
+        root_label = node.get("name") or key.replace("_", " ").title()
+        _walk(node, [root_label])
+
+    metadata = {
+        "name": "YouTube 書籤",
+        "category": "chrome-youtube",
+        "tags": ["chrome", "youtube", "bookmarks"],
+        "path": "/chrome_youtube/",
+        "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
+        "filesystem_path": CHROME_BOOKMARK_PATH
+    }
+
+    return metadata, results
 
 def _extract_folder_ids(raw_folders):
     """
