@@ -10,13 +10,19 @@ from file_handler import (
     get_eagle_stream_items,
 )
 
+from .utils import RouteRegistry
 
+reg = RouteRegistry()
+
+
+@reg.register("/EAGLE_folders/")
 def list_all_eagle_folder():
     """列出所有 Eagle 資料夾，並符合 EAGLE API 樣式"""
     metadata, data = get_eagle_folders()
     return render_template("view_both.html", metadata=metadata, data=data)
 
 
+@reg.register("/EAGLE_folder/<eagle_folder_id>/")
 def view_eagle_folder(eagle_folder_id):
     """顯示指定 Eagle 資料夾 ID 下的所有圖片"""
     metadata, data = get_eagle_images_by_folderid(eagle_folder_id)
@@ -42,12 +48,14 @@ def view_eagle_folder(eagle_folder_id):
     return render_template("view_both.html", metadata=metadata, data=data)
 
 
+@reg.register("/EAGLE_tags/")
 def list_eagle_tags():
     """列出 Eagle 中的所有標籤並提供連結"""
     metadata, tags = get_eagle_tags()
     return render_template("eagle_tags.html", metadata=metadata, tags=tags)
 
 
+@reg.register("/EAGLE_tag/<target_tag>/")
 def view_images_by_tag(target_tag):
     """
     顯示所有帶有指定標籤的圖片，並符合 EAGLE API 格式。
@@ -77,11 +85,13 @@ def view_images_by_tag(target_tag):
     return render_template("view_both.html", metadata=metadata, data=data)
 
 
+@reg.register("/EAGLE_stream/")
 def eagle_stream():
     """顯示無限滾動串流頁面"""
     return render_template("eagle_stream.html")
 
 
+@reg.register("/EAGLE_video/<item_id>/")
 def view_eagle_video(item_id):
     """顯示 Eagle 影片的詳細資訊與播放器頁面"""
     metadata, video = get_eagle_video_details(item_id)
@@ -93,6 +103,7 @@ def view_eagle_video(item_id):
     return render_template("video_player.html", metadata=metadata, video=video)
 
 
+@reg.register("/EAGLE_image/<item_id>/")
 def view_eagle_image(item_id):
     """顯示 Eagle 圖片的詳細資訊與展示頁面"""
     metadata, image = get_eagle_image_details(item_id)
@@ -104,6 +115,7 @@ def view_eagle_image(item_id):
     return render_template("image_viewer.html", metadata=metadata, image=image)
 
 
+@reg.register("/api/EAGLE_stream/")
 def eagle_stream_data():
     """提供 Eagle 串流頁面使用的資料"""
     try:
@@ -138,15 +150,3 @@ def eagle_stream_data():
         )
 
     return jsonify({"items": items, "nextOffset": offset + len(items)})
-
-
-routes = [
-    ["/EAGLE_folders/", list_all_eagle_folder],
-    ["/EAGLE_folder/<eagle_folder_id>/", view_eagle_folder],
-    ["/EAGLE_tags/", list_eagle_tags],
-    ["/EAGLE_tag/<target_tag>/", view_images_by_tag],
-    ["/EAGLE_stream/", eagle_stream],
-    ["/EAGLE_video/<item_id>/", view_eagle_video],
-    ["/EAGLE_image/<item_id>/", view_eagle_image],
-    ["/api/EAGLE_stream/", eagle_stream_data],
-]

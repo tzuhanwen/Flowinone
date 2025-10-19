@@ -86,8 +86,8 @@ def register_routes(app):
     註冊 Flask 路由
     """
 
-    utils_register_routes(app, chrome.routes)
-    utils_register_routes(app, eagle.routes)
+    utils_register_routes(app, chrome.reg.routes)
+    utils_register_routes(app, eagle.reg.routes)
 
     @app.route("/")
     def index():
