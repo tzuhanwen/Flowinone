@@ -3,7 +3,7 @@ import platform
 import random
 import subprocess
 from urllib.parse import unquote
-from flask import Flask, render_template, abort, send_from_directory, request, redirect, url_for, jsonify
+from flask import render_template, abort, send_from_directory, request, redirect, url_for, jsonify
 from file_handler import (
     get_all_folders_info,
     get_folder_images,
