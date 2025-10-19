@@ -484,9 +484,12 @@ def get_eagle_images_by_tag(target_tag):
         (metadata, data): 以符合 EAGLE API 樣式的 `metadata` 與 `data`
     """
     # 從 Eagle API 獲取帶有該標籤的圖片
-    response = eg.list_items(tags=[target_tag], orderBy="CREATEDATE")
-    if response.get('status') == 'error':
-        abort(500, description=f"Error fetching images with tag '{target_tag}': {response.get('data')}")
+    try:
+        # TODO: implement raise_on_error on list_items
+        items = eg.list_items(tags=[target_tag], orderBy="CREATEDATE")
+    except Exception:
+        traceback.print_exc()
+        abort(500, description=f"Error fetching images with tag `{target_tag}`")
 
     # 設定 metadata
     metadata = {
@@ -498,8 +501,9 @@ def get_eagle_images_by_tag(target_tag):
         "filesystem_path": None
     }
 
-    image_items = response.get("data", [])
-    data = _format_eagle_items(image_items)
+    if items is None:
+        items = []
+    data = _format_eagle_items(items)
     return metadata, data
 
 def get_eagle_tags():
