@@ -225,6 +225,7 @@ def register_routes(app):
     def serve_image_by_full_path(image_path):
         """提供靜態圖片服務"""
         directory, filename = os.path.split(image_path)
+        print(directory, filename)
         directory = "/" + directory
         return send_from_directory(directory, filename)
 
