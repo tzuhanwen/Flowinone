@@ -506,11 +506,8 @@ def get_eagle_tags():
     """
     從 Eagle API 取得所有標籤資訊，整理給前端使用。
     """
-    response = eg.get_tags()
-    if response.get("status") != "success":
-        abort(500, description=f"Failed to fetch Eagle tags: {response.get('data')}")
+    raw_data = eg.get_tags()
 
-    raw_data = response.get("data", [])
     if isinstance(raw_data, dict):
         tag_entries = raw_data.get("tags") or raw_data.get("data") or []
     else:
