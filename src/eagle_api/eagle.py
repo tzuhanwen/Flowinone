@@ -37,17 +37,15 @@ class Eagle:
         """
         return self.eg.request("application/info")
 
-    def get_library_info(self):
+    def get_library_info(self, raise_on_error: bool = False):
         """
         獲取當前運行的 Eagle 資源庫的詳細信息。
 
         Returns:
             dict: 包含資源庫詳細信息的字典。如果請求失敗，返回錯誤信息。
         """
-        response = self.eg.request("library/info", "GET")
-        if response.get("status") == "error":
-            return {"status": "error", "data": response.get("data")}
-        return response
+        data = self.eg.request("library/info", "GET", raise_on_error=raise_on_error)
+        return data
 
     def get_current_library_path(self) -> str:
         """
@@ -56,12 +54,10 @@ class Eagle:
         Returns:
             str: 当前资源库的路径。如果请求失败或路径未找到，则返回错误信息。
         """
-        response = self.eg.request("library/info", "GET")
-        if response.get("status") != "success":
-            raise ValueError(f"Failed to fetch library info: {response.get('data')}")
+        lib_info = self.eg.request("library/info", "GET")
 
         # 提取资源库路径
-        library_path = response.get("data", {}).get("library", {}).get("path")
+        library_path = lib_info.get("library", {}).get("path")
         if not library_path:
             raise ValueError("Library path not found in response.")
         

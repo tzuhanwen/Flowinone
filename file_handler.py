@@ -7,6 +7,7 @@ from urllib.parse import quote
 import mimetypes
 from flask import abort
 from config import DB_route_internal, DB_route_external, CHROME_BOOKMARK_PATH
+import traceback
 
 from src.eagle_api import Eagle
 
@@ -389,9 +390,11 @@ def get_eagle_folders():
     """
     獲取 Eagle API 提供的所有資料夾資訊
     """
-    response = eg.get_library_info()
-    if response.get("status") != "success":
-        abort(500, description=f"Failed to fetch Eagle folders: {response.get('data')}")
+    try:
+        lib_info = eg.get_library_info(raise_on_error=True)
+    except Exception as e:
+        traceback.print_exc()
+        abort(500, description=str(e))
 
     metadata = {
         "name": "All Eagle Folders",
@@ -403,7 +406,7 @@ def get_eagle_folders():
     }
 
     data = []
-    for folder in response.get("data", {}).get("folders", []):
+    for folder in lib_info.get("data", {}).get("folders", []):
         folder_id = folder.get("id")
         folder_name = folder.get("name", "Unnamed Folder")
 
@@ -411,8 +414,13 @@ def get_eagle_folders():
         folder_response = eg.list_items(folders=[folder_id])
         image_items = folder_response.get("data", [])
         image_items.sort(key=lambda x: x.get("name", ""))
-        thumbnail_path = f"/serve_image/{eg.get_current_library_path()}/images/{image_items[0]['id']}.info/{image_items[0]['name']}.{image_items[0]['ext']}" if image_items else DEFAULT_THUMBNAIL_ROUTE
 
+        if image_items:
+            first_image = image_items[0]
+            thumbnail_path = f"/serve_image/{eg.get_current_library_path()}/images/{first_image['id']}.info/{first_image['name']}.{first_image['ext']}"
+        else:
+            DEFAULT_THUMBNAIL_ROUTE
+        
         data.append({
             "name": folder_name,
             "id": folder_id,
