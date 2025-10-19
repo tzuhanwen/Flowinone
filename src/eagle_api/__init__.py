@@ -5,6 +5,7 @@ import pandas as pd
 from bs4 import BeautifulSoup
 from typing import List, Optional, Dict, Union
 
+from .fetcher import EagleApi
 
 ### EAPLE API documents url:
 ### https://api.eagle.cool/
@@ -18,34 +19,22 @@ from typing import List, Optional, Dict, Union
 # /api/item/thumbnail
 # /api/item/list   //////用這個filter出folder的問題  //////OPK
 
+eg = EagleApi()
 
 ############################################# 操作資料夾相關 #############################################
-
-# 通用請求函數
-def send_request_to_eagle(endpoint: str, method: str = "GET", payload: dict = None) -> Dict[str, Union[bool, Dict, str]]:
-    url = f"http://localhost:41595/api/{endpoint}"
-    try:
-        if method == "GET":
-            response = requests.get(url, params=payload)
-        elif method == "POST":
-            response = requests.post(url, json=payload)
-        response.raise_for_status()
-        return response.json()     # {"status": "success", "data": }
-    except requests.RequestException as e:
-        return {"status": "error", "data": str(e)}  # 保持與 API 返回結構一致
     
 # 資料夾相關操作
 def EAGLE_get_folders():
     """
     獲取所有資料夾列表。
     """
-    return send_request_to_eagle("folder/list")
+    return eg.request("folder/list")
 
 def EAGLE_get_recent_folders():
     """
     獲取最近使用的資料夾列表。
     """
-    return send_request_to_eagle("folder/listRecent")
+    return eg.request("folder/listRecent")
 
 def EAGLE_get_folders_df() -> pd.DataFrame:
     """
@@ -114,7 +103,7 @@ def EAGLE_create_folder(folderName: str): #tags: Optional[List[str]] = None
     parent id還沒弄
     """
     payload = {"folderName": folderName} # , "tags": tags
-    return send_request_to_eagle("folder/create", "POST", payload)
+    return eg.request("folder/create", "POST", payload)
 
 
 def EAGLE_update_folder_name(folderId: str, newName: str):
@@ -122,7 +111,7 @@ def EAGLE_update_folder_name(folderId: str, newName: str):
     重命名資料夾。
     """
     payload = {"folderId": folderId, "newName": newName}
-    return send_request_to_eagle("folder/rename", "POST", payload)
+    return eg.request("folder/rename", "POST", payload)
 
 
 
@@ -148,7 +137,7 @@ def EAGLE_update_folder_details(folderId: str,
         payload["newDescription"] = newDescription
     if newColor:
         payload["newColor"] = newColor
-    return send_request_to_eagle("folder/update", "POST", payload)
+    return eg.request("folder/update", "POST", payload)
 
 
 ############################################# query圖片用 #############################################
@@ -175,12 +164,12 @@ def EAGLE_add_image_from_url(url: str, folderId: str, name: Optional[str] = None
     #     # "headers": {XDD} #爬蟲用
     # }
     payload = {"url": url, "folderId": folderId, "name": name, "website": website, "tags": tags}
-    return send_request_to_eagle("item/addFromURL", "POST", payload)
+    return eg.request("item/addFromURL", "POST", payload)
 
 
 
 def EAGLE_add_img_from_json(payload):
-    return send_request_to_eagle("item/addFromURL", "POST", payload)
+    return eg.request("item/addFromURL", "POST", payload)
 
 
 # EAGLE_add_images_from_urls
@@ -208,7 +197,7 @@ def EAGLE_add_multiple_img_from_json(payload):
     # }
     # EAGLE_add_multiple_img_from_json(data)
 
-    return send_request_to_eagle("item/addFromURLs", "POST", payload)
+    return eg.request("item/addFromURLs", "POST", payload)
 
 
 def EAGLE_add_bookmark(url: str, name: str, tags: Optional[List[str]] = None):
@@ -225,7 +214,7 @@ def EAGLE_add_bookmark(url: str, name: str, tags: Optional[List[str]] = None):
     """
 
     payload = {"url": url, "name": name, "tags": tags}
-    return send_request_to_eagle("item/addBookmark", "POST", payload)
+    return eg.request("item/addBookmark", "POST", payload)
 
 
 ############################################# 雜 #############################################
@@ -233,25 +222,25 @@ def EAGLE_get_tags():
     """
     獲取 Eagle 庫中所有標籤。
     """
-    return send_request_to_eagle("tag/list")
+    return eg.request("tag/list")
 
 def EAGLE_get_item_info(item_id: str):
     """
     取得指定項目的詳細資訊。
     """
-    response = send_request_to_eagle("item/info", "GET", {"itemId": item_id})
+    response = eg.request("item/info", "GET", {"itemId": item_id})
     if response.get("status") == "success":
         return response
 
     # 某些版本的 API 可能使用 id 參數。
-    return send_request_to_eagle("item/info", "GET", {"id": item_id})
+    return eg.request("item/info", "GET", {"id": item_id})
 
 
 def EAGLE_get_application_info():
     """
     獲取 Eagle App 應用資訊。
     """
-    return send_request_to_eagle("application/info")
+    return eg.request("application/info")
 
 def EAGLE_get_library_info():
     """
@@ -260,7 +249,7 @@ def EAGLE_get_library_info():
     Returns:
         dict: 包含資源庫詳細信息的字典。如果請求失敗，返回錯誤信息。
     """
-    response = send_request_to_eagle("library/info", "GET")
+    response = eg.request("library/info", "GET")
     if response.get("status") == "error":
         return {"status": "error", "data": response.get("data")}
     return response
@@ -272,7 +261,7 @@ def EAGLE_get_current_library_path() -> str:
     Returns:
         str: 当前资源库的路径。如果请求失败或路径未找到，则返回错误信息。
     """
-    response = send_request_to_eagle("library/info", "GET")
+    response = eg.request("library/info", "GET")
     if response.get("status") != "success":
         raise ValueError(f"Failed to fetch library info: {response.get('data')}")
 
@@ -296,7 +285,7 @@ def EAGLE_update_item_tags(itemId: str, tags: List[str]):
         dict: 包含更新操作結果的字典。
     """
     payload = {"itemId": itemId, "tags": tags}
-    return send_request_to_eagle("item/update", "POST", payload)
+    return eg.request("item/update", "POST", payload)
 
 
 
@@ -342,7 +331,7 @@ def EAGLE_list_items(limit: int = 200, offset: int = 0, orderBy: Optional[str] =
     payload = {k: v for k, v in payload.items() if v is not None}
 
     # 使用通用请求函数
-    return send_request_to_eagle("item/list", "GET", payload)
+    return eg.request("item/list", "GET", payload)
 
 
 ##### 之後再做
