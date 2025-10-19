@@ -59,7 +59,7 @@ def _open_in_file_manager(target_path):
 def register_routes_debug(app):
     @app.route("/debug/")
     def debug_print():
-        # df_folders_info = EG.EAGLE_get_folders_df()
+        # df_folders_info = eg.folders.get_df()
         # print(df_folders_info.shape)
         # print(df_folders_info.columns)
         df_to_post = [

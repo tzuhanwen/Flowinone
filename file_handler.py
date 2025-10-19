@@ -5,16 +5,17 @@ from collections import OrderedDict
 from datetime import datetime
 from urllib.parse import quote
 import mimetypes
-import src.eagle_api as EG
 from flask import abort
 from config import DB_route_internal, DB_route_external, CHROME_BOOKMARK_PATH
 
+from src.eagle_api import Eagle
 
 IMAGE_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
 VIDEO_EXTENSIONS = {"mp4", "mov", "avi", "mkv", "webm", "m4v"}
 DEFAULT_THUMBNAIL_ROUTE = "/static/default_thumbnail.svg"
 DEFAULT_VIDEO_THUMBNAIL_ROUTE = "/static/default_video_thumbnail.svg"
 
+eg = Eagle()
 
 def _extract_youtube_id(url):
     if not url:
@@ -388,7 +389,7 @@ def get_eagle_folders():
     """
     獲取 Eagle API 提供的所有資料夾資訊
     """
-    response = EG.EAGLE_get_library_info()
+    response = eg.get_library_info()
     if response.get("status") != "success":
         abort(500, description=f"Failed to fetch Eagle folders: {response.get('data')}")
 
@@ -398,7 +399,7 @@ def get_eagle_folders():
         "tags": ["eagle", "folders"],
         "path": "/EAGLE_folder",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path()
+        "filesystem_path": eg.get_current_library_path()
     }
 
     data = []
@@ -407,10 +408,10 @@ def get_eagle_folders():
         folder_name = folder.get("name", "Unnamed Folder")
 
         # 取得 Eagle 資料夾內的縮圖
-        folder_response = EG.EAGLE_list_items(folders=[folder_id])
+        folder_response = eg.list_items(folders=[folder_id])
         image_items = folder_response.get("data", [])
         image_items.sort(key=lambda x: x.get("name", ""))
-        thumbnail_path = f"/serve_image/{EG.EAGLE_get_current_library_path()}/images/{image_items[0]['id']}.info/{image_items[0]['name']}.{image_items[0]['ext']}" if image_items else DEFAULT_THUMBNAIL_ROUTE
+        thumbnail_path = f"/serve_image/{eg.get_current_library_path()}/images/{image_items[0]['id']}.info/{image_items[0]['name']}.{image_items[0]['ext']}" if image_items else DEFAULT_THUMBNAIL_ROUTE
 
         data.append({
             "name": folder_name,
@@ -428,11 +429,11 @@ def get_eagle_images_by_folderid(eagle_folder_id):
     """
     獲取 Eagle API 提供的指定資料夾內的圖片資訊，符合 EAGLE API 格式
     """
-    response = EG.EAGLE_list_items(folders=[eagle_folder_id])
+    response = eg.list_items(folders=[eagle_folder_id])
     if response.get("status") != "success":
         abort(500, description=f"Failed to fetch images from Eagle folder: {response.get('data')}")
 
-    # df = EG.EAGLE_get_folders_df()
+    # df = eg.get_folders_df()
     # row = df[df["id"] == eagle_folder_id]  ###並沒有recursive地找...
     # if row.empty:
     #     return []
@@ -475,7 +476,7 @@ def get_eagle_images_by_tag(target_tag):
         (metadata, data): 以符合 EAGLE API 樣式的 `metadata` 與 `data`
     """
     # 從 Eagle API 獲取帶有該標籤的圖片
-    response = EG.EAGLE_list_items(tags=[target_tag], orderBy="CREATEDATE")
+    response = eg.list_items(tags=[target_tag], orderBy="CREATEDATE")
     if response.get('status') == 'error':
         abort(500, description=f"Error fetching images with tag '{target_tag}': {response.get('data')}")
 
@@ -497,7 +498,7 @@ def get_eagle_tags():
     """
     從 Eagle API 取得所有標籤資訊，整理給前端使用。
     """
-    response = EG.EAGLE_get_tags()
+    response = eg.get_tags()
     if response.get("status") != "success":
         abort(500, description=f"Failed to fetch Eagle tags: {response.get('data')}")
 
@@ -549,7 +550,7 @@ def get_eagle_tags():
 
 def search_eagle_items(keyword, limit=120):
     """透過 Eagle API 搜尋關鍵字並回傳格式化後的列表。"""
-    response = EG.EAGLE_list_items(keyword=keyword, limit=limit, orderBy="CREATEDATE")
+    response = eg.list_items(keyword=keyword, limit=limit, orderBy="CREATEDATE")
     if response.get("status") != "success":
         abort(500, description=f"Failed to search Eagle items: {response.get('data')}")
 
@@ -562,7 +563,7 @@ def search_eagle_items(keyword, limit=120):
         "tags": [keyword],
         "path": f"/search?query={keyword}",
         "thumbnail_route": DEFAULT_THUMBNAIL_ROUTE,
-        "filesystem_path": EG.EAGLE_get_current_library_path()
+        "filesystem_path": eg.get_current_library_path()
     }
 
     return metadata, data
@@ -572,7 +573,7 @@ def get_eagle_stream_items(offset=0, limit=30):
     取得 Eagle 圖片/影片串流用的項目清單。
     """
     try:
-        response = EG.EAGLE_list_items(limit=limit, offset=offset, orderBy="CREATEDATE")
+        response = eg.list_items(limit=limit, offset=offset, orderBy="CREATEDATE")
     except Exception as exc:
         abort(500, description=f"Failed to fetch Eagle stream items: {exc}")
 
@@ -792,7 +793,7 @@ def _build_eagle_folder_links(folder_ids):
         return []
 
     try:
-        df = EG.EAGLE_get_folders_df_all(flatten=True)
+        df = eg.folders.get_df_all(flatten=True)
     except Exception:
         df = None
 
@@ -851,7 +852,7 @@ def _get_eagle_folder_context(folder_id):
     取得指定 Eagle 資料夾及其父資料夾資訊。
     Returns (current_folder, parent_folder)
     """
-    response = EG.EAGLE_get_library_info()
+    response = eg.get_library_info()
     if response.get("status") != "success":
         return None, None
 
@@ -945,7 +946,7 @@ def _build_eagle_similar_items(current_item_id, tags, folder_ids, limit=6):
     primary_tags = tags[:2] if tags else []
     for tag in primary_tags:
         try:
-            resp = EG.EAGLE_list_items(tags=[tag], limit=120, orderBy="MODIFIEDDATE")
+            resp = eg.list_items(tags=[tag], limit=120, orderBy="MODIFIEDDATE")
         except Exception:
             continue
         _accumulate_from_response(resp)
@@ -956,7 +957,7 @@ def _build_eagle_similar_items(current_item_id, tags, folder_ids, limit=6):
         primary_folders = folder_ids[:2]
         for folder_id in primary_folders:
             try:
-                resp = EG.EAGLE_list_items(folders=[folder_id], limit=120, orderBy="MODIFIEDDATE")
+                resp = eg.list_items(folders=[folder_id], limit=120, orderBy="MODIFIEDDATE")
             except Exception:
                 continue
             _accumulate_from_response(resp)
@@ -999,7 +1000,7 @@ def get_eagle_video_details(item_id):
     """
     從 Eagle API 取得單一影片項目的詳細資訊並組合成播放器頁面需要的結構。
     """
-    response = EG.EAGLE_get_item_info(item_id)
+    response = eg.get_item_info(item_id)
     if response.get("status") != "success":
         abort(500, description=f"Failed to fetch Eagle item info: {response.get('data')}")
 
@@ -1019,7 +1020,7 @@ def get_eagle_video_details(item_id):
     if ext not in VIDEO_EXTENSIONS:
         abort(404, description="Requested Eagle item is not a video.")
 
-    base_library_path = EG.EAGLE_get_current_library_path()
+    base_library_path = eg.get_current_library_path()
     item_dir = os.path.join(base_library_path, "images", f"{item_id}.info")
 
     candidate_files = []
@@ -1110,7 +1111,7 @@ def get_eagle_image_details(item_id):
     """
     從 Eagle API 取得單一圖片項目的詳細資訊並組合成展示頁面需要的結構。
     """
-    response = EG.EAGLE_get_item_info(item_id)
+    response = eg.get_item_info(item_id)
     if response.get("status") != "success":
         abort(500, description=f"Failed to fetch Eagle item info: {response.get('data')}")
 
@@ -1123,7 +1124,7 @@ def get_eagle_image_details(item_id):
     file_name = item.get("name") or item_id
     file_name_with_ext = item.get("fileName")
 
-    base_library_path = EG.EAGLE_get_current_library_path()
+    base_library_path = eg.get_current_library_path()
     item_dir = os.path.join(base_library_path, "images", f"{item_id}.info")
 
     candidate_files = []
@@ -1210,7 +1211,7 @@ def _format_eagle_items(image_items):
     image_items.sort(key=lambda x: x.get("name", "")) # 按名稱排序
     data = []
 
-    base = EG.EAGLE_get_current_library_path()
+    base = eg.get_current_library_path()
     for image in image_items:
         image_id = image.get("id")
         image_name = image.get("name", "unknown")
@@ -1242,7 +1243,7 @@ def get_subfolders_info(folder_id):
     根據指定的 folder_id，取出其 children（子資料夾 id list），
     並組成符合前端展示格式的 list of dict。
     """
-    df = EG.EAGLE_get_folders_df()
+    df = eg.folders.get_df()
 
     # 找出指定 folder row
     row = df[df["id"] == folder_id]
@@ -1263,14 +1264,14 @@ def get_subfolders_info(folder_id):
         path = f"/EAGLE_folder/{child_id}"
 
         # 嘗試取一張圖作為縮圖
-        folder_response = EG.EAGLE_list_items(folders=[child_id])
+        folder_response = eg.list_items(folders=[child_id])
         thumbnail_route = DEFAULT_THUMBNAIL_ROUTE
         if folder_response.get("status") == "success" and folder_response.get("data"):
             first_img = folder_response["data"][0]
             image_id = first_img["id"]
             image_name = first_img["name"]
             image_ext = first_img["ext"]
-            base = EG.EAGLE_get_current_library_path()
+            base = eg.get_current_library_path()
             thumbnail_route = f"/serve_image/{base}/images/{image_id}.info/{image_name}.{image_ext}"
 
         result.append({
